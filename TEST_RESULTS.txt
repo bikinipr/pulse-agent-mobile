@@ -1,0 +1,57 @@
+=== RUN   TestCloudAuthenticationAndKeyPrivacy
+--- PASS: TestCloudAuthenticationAndKeyPrivacy (0.00s)
+=== RUN   TestCloudBlocksUnencryptedAccess
+--- PASS: TestCloudBlocksUnencryptedAccess (0.00s)
+=== RUN   TestSaleModelsUse30dAndMarketMin
+--- PASS: TestSaleModelsUse30dAndMarketMin (0.00s)
+=== RUN   TestExtendedFilters
+--- PASS: TestExtendedFilters (0.00s)
+=== RUN   TestSaleEstimateFromBaseAndSevenDaySales
+--- PASS: TestSaleEstimateFromBaseAndSevenDaySales (0.00s)
+=== RUN   TestPresetExclusionsDoNotMatchFinishName
+--- PASS: TestPresetExclusionsDoNotMatchFinishName (0.00s)
+=== RUN   TestDemoFinance
+--- PASS: TestDemoFinance (0.00s)
+=== RUN   Test39SalesReject
+--- PASS: Test39SalesReject (0.00s)
+=== RUN   TestMin500Reject
+--- PASS: TestMin500Reject (0.00s)
+=== RUN   TestDuplicateID
+--- PASS: TestDuplicateID (0.00s)
+=== RUN   TestURLAllowlist
+--- PASS: TestURLAllowlist (0.00s)
+=== RUN   TestConfig
+--- PASS: TestConfig (0.00s)
+=== RUN   TestAPIKeyFieldIsVisibleAndNotSaved
+--- PASS: TestAPIKeyFieldIsVisibleAndNotSaved (0.00s)
+=== RUN   TestUIOnlyQualifiedItemsAndBuffLink
+--- PASS: TestUIOnlyQualifiedItemsAndBuffLink (0.00s)
+=== RUN   TestCSVFiltersRejectedEvenWithAllViewParam
+--- PASS: TestCSVFiltersRejectedEvenWithAllViewParam (0.00s)
+=== RUN   TestNegativeProfitExcludedEvenIfMinROIIsZero
+--- PASS: TestNegativeProfitExcludedEvenIfMinROIIsZero (0.00s)
+=== RUN   TestPrefsPersistenceAndAllSettingsRoute
+--- PASS: TestPrefsPersistenceAndAllSettingsRoute (0.00s)
+=== RUN   TestExtraAPIRequestPaths
+--- PASS: TestExtraAPIRequestPaths (0.00s)
+=== RUN   TestLivePulseOfficialEndpointsAndResult
+--- PASS: TestLivePulseOfficialEndpointsAndResult (0.00s)
+=== RUN   TestLiveRejectSparseSales
+--- PASS: TestLiveRejectSparseSales (0.00s)
+=== RUN   TestLiveShowsOnlyEligibleBuffItemsWithLinks
+--- PASS: TestLiveShowsOnlyEligibleBuffItemsWithLinks (0.00s)
+=== RUN   TestLinksFromCorrectMarketOnly
+--- PASS: TestLinksFromCorrectMarketOnly (0.00s)
+=== RUN   TestFix093ProfitableItemSurvivesMissingLinksAndOldQuotes
+--- PASS: TestFix093ProfitableItemSurvivesMissingLinksAndOldQuotes (0.00s)
+=== RUN   TestFix093CaseWhitespaceAndDuplicatedNames
+--- PASS: TestFix093CaseWhitespaceAndDuplicatedNames (0.00s)
+=== RUN   TestFix093DiagnosticStagesForThreeMockScans
+    regression_093_test.go:75: 3 повторных сканирования — без обращения к Pulse и без расхода токенов
+--- PASS: TestFix093DiagnosticStagesForThreeMockScans (0.00s)
+=== RUN   TestFix093HasDiagnosticUiElement
+--- PASS: TestFix093HasDiagnosticUiElement (0.00s)
+=== RUN   TestFix093BudgetButtonIsLimited
+--- PASS: TestFix093BudgetButtonIsLimited (0.00s)
+PASS
+ok  	pulseagent	0.010s

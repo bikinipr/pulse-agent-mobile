@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Pulse Agent — мобильная веб-версия</title>
+<style>
+:root{color-scheme:dark;font:14px system-ui,-apple-system,'Segoe UI',Arial,sans-serif;background:#0c121d;color:#e8eff8}*{box-sizing:border-box}body{max-width:1360px;margin:0 auto;padding:22px 18px 38px}header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}h1{font-size:26px;margin:0 0 4px;letter-spacing:-.5px}h2{font-size:17px;margin:0 0 14px}p{line-height:1.55}.muted{color:#a5b6cd}.small{font-size:12px}.pill{display:inline-block;border-radius:50px;background:#18344b;color:#b9e2ff;font-weight:600;font-size:12px;padding:5px 10px}section{padding:18px;border:1px solid #2b3a50;border-radius:14px;background:#151e2c;margin:14px 0;box-shadow:0 4px 14px #050b161f}.notice{border-left:3px solid #f0b971;background:#292436;padding:11px 14px;border-radius:8px;color:#f3d49c;line-height:1.5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.grid.two{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}.field{display:flex;flex-direction:column;gap:6px}label{font-size:12px;font-weight:600;color:#c7d4e7}input,select{border-radius:9px;border:1px solid #3c5069;background:#0e1623;color:#fff;font:inherit;padding:11px;min-width:0;width:100%}input:focus,select:focus{outline:2px solid #5c9ce0;outline-offset:1px}input[type=checkbox]{width:auto;accent-color:#619cda}.keyline{display:flex;gap:9px}.keyline input{flex:1}button{font:inherit;padding:11px 15px;border:1px solid #467bb7;border-radius:9px;background:#2864a3;color:#fff;font-weight:600;cursor:pointer}button:hover{filter:brightness(1.12)}button.secondary{background:#263951;border-color:#415773}button[disabled]{opacity:.65;cursor:default}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}.opt{display:flex;gap:9px;align-items:center;margin-top:11px}.success{color:#80e6ad}.warn{color:#f1c47c}.bad{color:#ff9ba9}.rule{height:1px;background:#2b3a50;margin:15px 0}.apiurls{background:#101725;border:1px solid #2d3e57;border-radius:8px;padding:10px;line-height:1.8;font-family:Consolas,ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere}.apiurls a{color:#94c4ff}.hint{color:#acb9c9;font-size:12px;line-height:1.5;margin-top:8px}.info-bar{display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-top:12px}.info-bar span{background:#132537;border:1px solid #27405b;border-radius:8px;padding:6px 10px;font-size:12px}table{min-width:1600px;width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #2c3b51;white-space:nowrap}th{color:#b7c7dc;font-size:12px}td{font-variant-numeric:tabular-nums}td a{color:#9ac8ff}.scroll{overflow:auto}#status{background:#0e1623;border:1px solid #354761;border-radius:9px;padding:10px 12px;min-height:37px}pre{background:#0e1623;border:1px solid #334761;border-radius:8px;padding:12px;overflow:auto;max-height:275px;font-size:12px}details{margin-top:14px;border:1px solid #32435a;padding:12px;border-radius:9px}summary{cursor:pointer;font-weight:600}a{color:#a3caff}.tabbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.tabbar button{background:#243a56;border-color:#3f5b80}.tabbar button.active{background:#296aad;border-color:#68b0ff}.searchtools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}.searchtools input{max-width:420px}.tag{display:inline-block;padding:4px 8px;border-radius:8px;background:#314255;color:#e8eff8;font-size:12px;white-space:normal;max-width:290px}.tag.pass{background:#184f35;color:#b9ffda}.tag.missing{background:#493e25;color:#f9dca3}.tag.reject{background:#54343a;color:#ffb3be}.linkbuff{display:inline-block;padding:7px 11px;border-radius:8px;background:#1b553c;color:#b4ffd7;font-weight:700;text-decoration:none;white-space:nowrap}.linkbuff:hover{background:#207044}.empty{padding:20px;color:#b6c3d2;text-align:center}.pager{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:10px}
+.filter-panel{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.filter-panel .wide{grid-column:1/-1}.filter-panel textarea{width:100%;border-radius:9px;background:#0e1623;color:#fff;border:1px solid #3c5069;padding:11px;min-height:70px;font:inherit}.num{font-variant-numeric:tabular-nums}.calc{font-size:12px;color:#92b0ce}.price{color:#b6f0ff}.api-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}.api-card{border:1px solid #324963;border-radius:12px;background:#101b2a;padding:14px;display:flex;flex-direction:column;gap:8px}.api-card strong{font-size:15px}.api-card p{font-size:12px;color:#b9cce0;margin:0;flex:1}.api-card button{align-self:flex-start}.api-card small{color:#91acd0}.save-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.save-bar .hint{margin:0}.error-note{color:#ff9ba9}.save-note{color:#92e9b2}#api_debug{max-height:400px;white-space:pre-wrap;overflow-wrap:anywhere}select option{background:#162237}.micro{font-size:11px;color:#95b2cf}.fieldset{margin-top:12px;display:flex;gap:14px;flex-wrap:wrap}.fieldset label{font-size:13px;color:#d5e3f5;cursor:pointer}textarea{width:100%;background:#0e1623;border:1px solid #3c5069;color:#fff;padding:10px;border-radius:9px;font-family:Consolas,monospace;min-height:76px}
+.mobile-results{display:none}
+@media(max-width:700px){body{padding:10px 10px 28px;font-size:14px}header h1{font-size:21px}section{padding:13px;margin:11px 0}h2{font-size:16px}.grid,.grid.two,.filter-panel,.api-cards{grid-template-columns:1fr}.actions button,.api-card button{width:100%}.actions{align-items:stretch;flex-direction:column}.keyline{flex-wrap:wrap}.keyline input{min-width:180px}.desktop-table{display:none}.mobile-results{display:block}.skin-card{padding:14px;border:1px solid #35516a;border-radius:13px;background:#101b2b;margin:10px 0}.skin-title{font-weight:700;font-size:15px;margin-bottom:10px;line-height:1.35}.skin-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.skin-stat{font-size:12px;color:#a9b9cc}.skin-stat strong{display:block;font-size:15px;color:#eef5ff;margin-top:3px}.skin-stat.positive strong{color:#8af0b5}.skin-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.skin-links a{padding:9px 12px;background:#244364;border-radius:8px;text-decoration:none;font-weight:600}.skin-links .linkbuff{background:#1b553c}.searchtools input{max-width:none}#item_search,#sort_by{width:100%;max-width:none!important}#status{overflow-wrap:anywhere}input,select,button{font-size:16px}}
+</style></head><body>
+<header><div><h1>Pulse Arbitrage Agent <span class="pill">Mobile Cloud</span></h1><div class="muted">BUFF163 → Market.CSGO / Market.Dota2 · только аналитика и ссылки</div></div><span class="pill">Веб-приложение · телефон и ПК</span></header>
+<section><h2>📱 Полное управление с телефона</h2><p class="hint">Открывай этот HTTPS-адрес на телефоне из любой сети. Сканирование и дополнительные методы Pulse запускаются здесь, без EXE. Для защиты аккаунта используется пароль хостинга. API-ключ рекомендуется задавать только в переменной окружения <code>PULSE_API_KEY</code>.</p><p class="hint">На бесплатном сервере приложение может останавливаться после периода бездействия, поэтому непрерывный мониторинг требует постоянно работающего хостинга.</p></section>
+<div class="notice">Данные рынка доступны только с действующим ключом Pulse и при наличии API-токенов. Реальную работу с твоим аккаунтом ещё не проверяли. Сигналы — предварительные оценки, не гарантия будущей цены. Автопокупки отсутствуют.</div>
+<section><h2>1. Быстрые фильтры</h2><div class="grid">
+<div class="field"><label for="cny_rub">Фактический курс ₽ за 1 ¥</label><input id="cny_rub" type="number" step="0.01" min="0.01" value="13.07"></div>
+<div class="field"><label for="net_revenue_factor">Коэффициент чистой выручки</label><input id="net_revenue_factor" type="number" step="0.0001" min="0.0001" max="1" value="0.9025"></div>
+<div class="field"><label for="min_purchase_rub">Минимальная себестоимость ₽</label><input id="min_purchase_rub" type="number" step="1" min="0" value="500"></div>
+<div class="field"><label for="max_purchase_rub">Максимальная себестоимость ₽ (0 = без лимита)</label><input id="max_purchase_rub" type="number" step="1" min="0" value="0"></div>
+<div class="field"><label for="min_roi_pct">Минимальный ROI %</label><input id="min_roi_pct" type="number" step="0.1" min="0" value="10"></div>
+<div class="field"><label for="max_roi_pct">Максимальный ROI % (0 = без лимита)</label><input id="max_roi_pct" type="number" step="0.1" min="0" value="0"></div>
+<div class="field"><label for="min_sales_30d">Минимум продаж за 30 дней</label><input id="min_sales_30d" type="number" step="1" min="0" value="40"></div>
+<div class="field"><label for="min_sales_7d">Минимум продаж за 7 дней (0 = нет)</label><input id="min_sales_7d" type="number" step="1" min="0" value="0"></div>
+<div class="field"><label for="poll_minutes">Интервал мониторинга, минуты</label><input id="poll_minutes" type="number" step="1" min="1" value="30"></div>
+</div>
+<details open><summary>Цена продажи: сравнение минимальной цены и средней за месяц</summary><div class="filter-panel" style="margin-top:14px">
+<div class="field"><label for="sale_price_model">Модель предполагаемой цены продажи</label><select id="sale_price_model"><option value="safe" selected>Осторожная: минимум из двух цен</option><option value="min">Минимальная цена на Market</option><option value="average">Средняя за 30 дней (может быть выше рынка)</option></select></div>
+<div class="field"><label for="sale_discount_pct">Уценка для ускорения продажи, %</label><input id="sale_discount_pct" type="number" min="0" max="20" step="0.5" value="1"></div>
+</div><p class="hint">Осторожная оценка = min(средняя цена за 30 дней; минимальное предложение Market × (1 − уценка/100)). Другие модели могут переоценивать скорость продажи. Доход уже учитывает коэффициент 0,9025.</p></details>
+<details><summary>Фильтры предметов — выбор без ручного ввода</summary><div class="filter-panel" style="margin-top:14px">
+<div class="field"><label for="item_type">Тип предмета</label><select id="item_type"><option value="">Все типы (обновится после сканирования)</option></select></div>
+<div class="field"><label for="quality">Качество</label><select id="quality"><option value="">Любое качество (обновится после сканирования)</option></select></div>
+<div class="field wide"><label>Исключить из сигналов</label><div class="fieldset">
+<label><input id="exclude_sticker" type="checkbox"> Наклейки</label>
+<label><input id="exclude_case" type="checkbox"> Кейсы</label>
+<label><input id="exclude_souvenir" type="checkbox"> Сувенирные</label>
+</div><input type="hidden" id="blacklist"></div>
+</div><p class="hint">Тип и качество заполняются автоматически из данных Pulse. Пока предметы не загружены, разрешены все типы и качества. Ужесточение фильтров сразу скрывает неподходящие строки. Чтобы увидеть новые варианты после смягчения фильтра, повтори сканирование.</p></details>
+<div class="actions"><button class="secondary" onclick="saveConfig()">Сохранить все настройки</button><div id="save_feedback" class="hint" role="status" aria-live="polite">После сохранения параметры восстановятся при обновлении страницы и повторном запуске программы.</div></div></section>
+<section><h2>2. Подключение Pulse TradeOn</h2>
+<div class="field"><label for="api_key">API-ключ Pulse</label><div class="keyline"><input id="api_key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Ключ на сервере в PULSE_API_KEY" oninput="keyState()"><button type="button" class="secondary" id="show_key" onclick="toggleAPIKey()">Показать</button></div></div>
+<div class="hint"><span id="key_state" class="warn">Ключ не введён</span> · API-ключ хранится в оперативной памяти и, если включена опция ниже, защищённо сохраняется Windows DPAPI для твоего пользователя. В CSV и логи ключ не добавляется.</div>
+<label class="opt"><input id="remember_api" type="checkbox" checked> Запоминать API-ключ между запусками EXE (защита Windows DPAPI)</label>
+<div class="rule"></div><div class="grid">
+<div class="field"><label for="game">Игра</label><select id="game"><option value="both">CS2 + Dota2</option><option value="CsGo">Только CS2</option><option value="Dota2">Только Dota2</option></select></div>
+<div class="field"><label for="pages">Страниц на площадку</label><select id="pages"><option value="1">1 страница</option><option value="2">2 страницы</option><option value="3">3 страницы</option><option value="4">4 страницы</option><option value="5">5 страниц</option></select></div>
+<div class="field"><label for="page_size">Предметов на странице</label><select id="page_size"><option value="50">50</option><option value="100" selected>100</option><option value="250">250</option><option value="500">500 (максимум API)</option></select></div>
+</div>
+<label class="opt"><input id="include_market_info" type="checkbox">Дополнительно запрашивать MarketInfo (метаданные; расходует токены, не является источником цен)</label>
+<label class="opt"><input id="verify_market" type="checkbox">Строгая проверка историей Market.CSGO/Dota2 (медленнее; при недоступности истории отклоняет кандидатов)</label>
+<div class="apiurls"><b>Подтверждённые адреса встроены:</b><br>
+<a href="https://tradeon.gitbook.io/tradeon-api/info-item/base-item-info" target="_blank" rel="noopener noreferrer">GET</a> https://api-pulse.tradeon.space/public-api/item/base-info<br>
+<a href="https://tradeon.gitbook.io/tradeon-api/info-item/market-info" target="_blank" rel="noopener noreferrer">GET</a> https://api-pulse.tradeon.space/public-api/item/market-info<br>
+Авторизация: заголовок <code>Api-Key</code>. Рынки: <code>Buff / CNY</code> и <code>Tm / RUB</code>.
+</div><div class="hint" id="api-cost">Оценка расхода: 8 токенов за проверку (при выборе обеих игр, 1 страницы и без MarketInfo).</div>
+<details><summary>Telegram-уведомления (необязательно)</summary><label class="opt"><input id="telegram_enabled" type="checkbox">Отправлять сигналы, найденные через настоящий API (до 5 новых за цикл)</label><label class="opt"><input type="checkbox" id="remember_telegram"> Запоминать токен Telegram защищённо</label><div class="grid two"><div class="field"><label for="telegram_token">Токен Telegram-бота</label><input id="telegram_token" type="password" autocomplete="off"></div><div class="field"><label for="telegram_chat">Chat ID</label><input id="telegram_chat" autocomplete="off"></div></div><p class="hint">При включённой опции токен шифруется Windows DPAPI; в JSON настроек не записывается. Telegram-сеть с твоими реквизитами ещё не проверена.</p></details>
+<div class="actions"><button onclick="scanLive()">Сканировать Pulse API</button><button class="secondary" onclick="scanBudgetCheck()">Проверка API — до 8 токенов</button><button class="secondary" id="monitorBtn" onclick="toggleMonitor()">Включить мониторинг</button><button class="secondary" onclick="location.href='/api/csv?view=all'">Скачать отобранные предметы CSV</button></div><p id="status" class="muted">Готов к первому сканированию.</p></section>
+<section id="extra-apis"><h2>3. Дополнительные возможности Pulse API</h2><p class="hint">Эти запросы выполняются только по кнопке. Отдельные методы могут расходовать API-токены. Результат отображается ниже и не изменяет автоматически фильтры или цену продажи.</p>
+<div class="grid">
+<div class="field"><label for="extra_game">Игра для дополнительных запросов</label><select id="extra_game"><option value="CsGo">CS2</option><option value="Dota2">Dota2</option></select></div>
+<div class="field"><label for="extra_market">Площадка для аналитики</label><select id="extra_market"><option value="Tm">Market.CSGO / Market.Dota2 (RUB)</option><option value="Buff">BUFF (CNY)</option></select></div>
+<div class="field"><label for="extra_item">Предмет из последнего сканирования</label><select id="extra_item"><option value="">Сначала сканируй предметы</option></select></div>
+<div class="field"><label for="extra_days">Период для сравнения ордеров</label><select id="extra_days"><option value="7">7 дней</option><option value="14">14 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option></select></div>
+</div>
+<div class="api-cards" style="margin-top:14px">
+<div class="api-card"><strong>MarketInfo · Карточка предмета</strong><p>Название, тип, качество, иконка и идентификаторы предмета на торговых площадках. Без цены.</p><small>GET · 2 токена по документации</small><button class="secondary" onclick="callExtra('market_info')">Запросить карточки</button></div>
+<div class="api-card"><strong>AdvancedInfos · Подробная аналитика</strong><p>Средние/медианные цены за разные периоды, популярность и более подробные заявки по выбранному предмету.</p><small>POST · 2 токена</small><button class="secondary" onclick="callExtra('advanced')">Получить аналитику</button></div>
+<div class="api-card"><strong>ItemsHistory · История сделок</strong><p>Точки истории продаж: цена, количество и время. Полезно для графика и оценки падений.</p><small>POST · 7 токенов</small><button class="secondary" onclick="callExtra('history')">Получить историю</button></div>
+<div class="api-card"><strong>CompareBestOffers · Лучшие заявки</strong><p>Сравнение лучших ордеров покупки/продажи и числа продаж за выбранный период.</p><small>POST · 3 токена</small><button class="secondary" onclick="callExtra('best_offers')">Сравнить ордера</button></div>
+<div class="api-card"><strong>Поддерживаемые рынки</strong><p>Площадки, на которых TradeOn предоставляет данные. Не влияет на формулы агента.</p><small>GET · системная информация</small><button class="secondary" onclick="callExtra('supported_markets')">Получить список</button></div>
+<div class="api-card"><strong>Комиссии площадок</strong><p>Справочные комиссии из TradeOn. Твой коэффициент чистой выручки 0,9025 остаётся ручной настройкой.</p><small>GET · системная информация</small><button class="secondary" onclick="callExtra('commissions')">Проверить комиссии</button></div>
+<div class="api-card"><strong>Стоимость методов</strong><p>Покажет, сколько API-токенов списывается за каждый метод, чтобы контролировать расход.</p><small>GET · системная информация</small><button class="secondary" onclick="callExtra('method_costs')">Проверить токены</button></div>
+<div class="api-card"><strong>Валюты</strong><p>Список поддерживаемых API валют; основные расчёты сейчас используют CNY и RUB.</p><small>GET · системная информация</small><button class="secondary" onclick="callExtra('currencies')">Получить валюты</button></div>
+</div>
+<details><summary>CompareTables · Точное сравнение BUFF → Market (для продвинутой настройки)</summary>
+<p class="hint">Метод сравнивает две площадки по правилам Pulse. Его настройки сложнее, чем обычные фильтры: пока используй собственный JSON по <a href="https://tradeon.gitbook.io/tradeon-api/info-item/compare-tables" target="_blank" rel="noopener noreferrer">официальной схеме</a>. Обязательные поля: game, currency, firstMarket=Buff, secondMarket=Tm, firstMarketOptions, secondMarketOptions, paginationRequest. Метод выполняется только по кнопке; цена рассчитывается пока через BaseInfos.</p>
+<textarea id="extra_compare_json" spellcheck="false" placeholder='{"game":"CsGo","currency":"RUB","firstMarket":"Buff","secondMarket":"Tm", ...}'></textarea>
+<div class="actions"><button class="secondary" onclick="callExtra('compare_tables')">Выполнить CompareTables</button><span class="hint">POST · 2 токена. Возможны ошибки валидации при неподходящих правилах.</span></div></details>
+<p id="extra_status" class="hint" role="status" aria-live="polite">Результат дополнительного метода появится здесь.</p><pre id="api_debug" aria-label="Ответ дополнительного API">—</pre>
+</section>
+<section><h2>4. Скины, прошедшие фильтры</h2><p class="hint" id="notice">В списке только предметы с положительной чистой прибылью, достаточным ROI и количеством продаж. Остальные скрыты и не попадают в CSV. Ссылки проверяются по игре: если BUFF не даёт прямую карточку, открывается поиск по названию в нужной игре; Market.CSGO открывает карточку по названию, Market.Dota2 — только подтверждённый /item/ URL.</p><div class="info-bar" id="counts"></div><p id="reject_stats" class="hint" aria-live="polite">Диагностика появится после сканирования.</p>
+<div class="searchtools"><input id="item_search" placeholder="Найти скин по названию…" aria-label="Поиск по найденным предметам" oninput="changeSearch()"><select id="sort_by" style="max-width:240px" aria-label="Сортировка" onchange="drawItems()"><option value="roi">ROI ↓</option><option value="profit">Прибыль ₽ ↓</option><option value="sales">Продажи 30д ↓</option><option value="cost">Себестоимость ₽ ↑</option><option value="name">Название A–Z</option></select><span id="shownCount" class="hint">Предметов: 0</span></div>
+<div id="mobile_results" class="mobile-results" aria-live="polite"></div><div class="scroll desktop-table"><table><thead><tr><th>Предмет</th><th>Игра</th><th>BUFF ¥</th><th>Себест. ₽</th><th>Мин. Market ₽</th><th>Средняя 30д ₽</th><th>Ожидаемая продажа ₽</th><th>Прибыль ₽</th><th>ROI</th><th>Продаж / 7д</th><th>Продаж / 30д</th><th>Статус / причина</th><th>Ссылка BUFF</th><th>Market</th></tr></thead><tbody id="results"></tbody></table></div>
+<div class="pager"><span id="page_label" class="hint"></span><button type="button" class="secondary" onclick="movePage(-1)" id="page_prev">Назад</button><button type="button" class="secondary" onclick="movePage(1)" id="page_next">Вперёд</button></div>
+<details><summary>Структура данных BaseInfos</summary><pre id="baseshape"></pre></details>
+</section><div class="hint" style="padding:18px">Результаты предварительные. Для постоянного фонового мониторинга нужен работающий сервер.</div>
+<script>
+let cloudAPIReady=false;
+let isCloud=true;
+const numberIds=['cny_rub','net_revenue_factor','min_purchase_rub','max_purchase_rub','min_roi_pct','max_roi_pct','min_sales_7d','min_sales_30d','sale_discount_pct','poll_minutes'];
+const textIds=['sale_price_model','item_type','quality','blacklist'];
+const prefsValue=['game','pages','page_size','telegram_chat','extra_game','extra_market','extra_item','extra_days','extra_compare_json'];
+const prefsBool=['include_market_info','verify_market','telegram_enabled','remember_api','remember_telegram','exclude_sticker','exclude_case','exclude_souvenir'];
+const ids=[...numberIds,...textIds];
+const val=id=>document.getElementById(id).value;
+const setText=(id,s)=>document.getElementById(id).textContent=s;
+const checked=id=>document.getElementById(id).checked;
+function keyState(){const ok=!!val('api_key').trim()||cloudAPIReady;const el=document.getElementById('key_state');el.textContent=ok?(cloudAPIReady?'API-ключ подключён на сервере':'API-ключ введён'):'Ключ не введён';el.className=ok?'success':'warn'}
+function toggleAPIKey(){const e=document.getElementById('api_key');e.type=e.type==='password'?'text':'password';setText('show_key',e.type==='password'?'Показать':'Скрыть')}
+function syncExclusions(){const terms=val('blacklist').split(/[,;\n]+/).map(x=>x.trim()).filter(x=>x&&!['sticker','case','souvenir'].includes(x.toLowerCase()));if(checked('exclude_sticker'))terms.push('Sticker');if(checked('exclude_case'))terms.push('Case');if(checked('exclude_souvenir'))terms.push('Souvenir');document.getElementById('blacklist').value=terms.join(', ')}
+async function api(path,payload){const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});let data;try{data=await response.json()}catch{throw Error('Сервер вернул не JSON')};if(!response.ok)throw Error(data.error||('HTTP '+response.status));return data}
+let saving=false;
+async function saveConfig(){
+ if(saving)return false;
+ const msg=document.getElementById('save_feedback');saving=true;msg.className='hint';msg.textContent='Сохранение настроек…';
+ try{
+  syncExclusions();
+  const settings={};for(const id of numberIds){const raw=val(id);const v=Number(raw);if(raw===''||!Number.isFinite(v))throw Error('Неправильное число в поле '+id);settings[id]=v}
+  for(const id of textIds){settings[id]=val(id)}
+  const prefs={};for(const id of prefsValue){prefs[id]=['pages','page_size','extra_days'].includes(id)?Number(val(id)):val(id)}for(const id of prefsBool){prefs[id]=checked(id)}
+  await api('/api/all-settings',{settings,prefs,api_key:'',telegram_token:''});
+  try{localStorage.setItem('pulse_mobile_filters_v1',JSON.stringify({settings,prefs}))}catch(e){console.warn('Browser settings not saved',e)}
+  msg.textContent='✓ Настройки сохранены в этом браузере '+new Date().toLocaleTimeString('ru-RU')+'.';msg.className='save-note';return true
+ }catch(e){msg.textContent='Ошибка сохранения: '+e.message;msg.className='error-note';return false}
+ finally{saving=false}
+}
+function pulseRequest(){return {mode:'pulse',pulse:{pages:+val('pages'),page_size:+val('page_size'),game:val('game'),include_market_info:checked('include_market_info')},api:{key:val('api_key')},verify_market:checked('verify_market'),telegram:{enabled:checked('telegram_enabled'),bot_token:val('telegram_token'),chat_id:val('telegram_chat')}}}
+async function scanLive(){try{if(!cloudAPIReady)throw Error('Добавь PULSE_API_KEY в переменные сервера');if(!await saveConfig())throw Error('Не удалось сохранить настройки');await api('/api/scan',pulseRequest());setText('status','Сканирование запущено. Ожидается ответ TradeOn API...')}catch(e){setText('status','Ошибка: '+e.message)}}
+// Targeted user-initiated check: up to four BaseInfos calls * 2 published tokens.
+// Does not enable periodic monitoring and deliberately excludes optional methods.
+async function scanBudgetCheck(){
+ try{
+  if(!cloudAPIReady)throw Error('Добавь PULSE_API_KEY в переменные сервера');
+  if(!await saveConfig())throw Error('Настройки не сохранены');
+  const req=pulseRequest();
+  req.pulse.pages=1;req.pulse.page_size=100;req.pulse.include_market_info=false;
+  req.verify_market=false;req.telegram.enabled=false;
+  await api('/api/scan',req);
+  setText('status','Проверочный запрос запущен: до 4 вызовов BaseInfos (ориентировочно до 8 токенов согласно документации).');
+ }catch(e){setText('status','Ошибка проверки: '+e.message)}
+}
+async function callExtra(method){
+ const status=document.getElementById('extra_status');status.textContent='Запрос '+method+'…';
+ try{if(!await saveConfig())throw Error('Не удалось сохранить настройки');
+  const response=await api('/api/pulse/extra',{method,game:val('extra_game'),market:val('extra_market'),item:val('extra_item'),days:Number(val('extra_days')),compare_json:val('extra_compare_json')});
+  status.textContent='Метод '+method+' вернул данные. Результат ограничен 45 000 символами для отображения.';
+  setText('api_debug',JSON.stringify(response.data,null,2).slice(0,45000));
+ }catch(e){status.textContent='Ошибка: '+e.message;setText('api_debug','—')}
+}
+function ensureOption(id,value){const el=document.getElementById(id);if(value && ![...el.options].some(x=>x.value===value)){const opt=new Option(value,value);el.add(opt)}}
+function setVal(id,value){const el=document.getElementById(id);if(!el)return; if(el.tagName==='SELECT')ensureOption(id,String(value??''));el.value=value??''}
+function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function safeURL(s){try{const u=new URL(s);return u.protocol==='https:'&&['buff.163.com','market.csgo.com','market.dota2.net','pulse.tradeon.space','steamcommunity.com'].includes(u.hostname)?u.href:''}catch{return ''}}
+let lastData={selected:[]};
+let pageIndex=0;
+const PAGE_SIZE=100;
+function changeSearch(){pageIndex=0;drawItems()}
+function movePage(step){pageIndex+=step;drawItems()}
+function nfmt(x){const n=Number(x);return x===undefined||x===null||!Number.isFinite(n)||n===0?'—':n.toFixed(2)}
+// An additional instant UI filter. The server also enforces all limits after each scan.
+function locallyEligible(c){
+ const cost=Number(c.cost_rub), roi=Number(c.roi_pct), profit=Number(c.profit_rub);
+ if(!(profit>0&&roi>0&&cost>0))return false;
+ if(cost<Number(val('min_purchase_rub'))||roi<Number(val('min_roi_pct'))||Number(c.sales_30d)<Number(val('min_sales_30d'))||Number(c.sales_7d)<Number(val('min_sales_7d')))return false;
+ if(Number(val('max_purchase_rub'))>0&&cost>Number(val('max_purchase_rub')))return false;
+ if(Number(val('max_roi_pct'))>0&&roi>Number(val('max_roi_pct')))return false;
+ const name=String(c.name||'').toLowerCase(), type=String(c.item_type||'').toLowerCase(),quality=String(c.quality||'').toLowerCase();
+ if(val('item_type')&&!type.includes(val('item_type').toLowerCase()))return false;
+ if(val('quality')&&!quality.includes(val('quality').toLowerCase()))return false;
+ if(checked('exclude_sticker')&&(name.startsWith('sticker |')||type.includes('sticker')))return false;
+ if(checked('exclude_case')&&(name.endsWith(' case')||name.endsWith(' chest')||type==='case'||type.includes('container')))return false;
+ if(checked('exclude_souvenir')&&name.startsWith('souvenir '))return false;
+ return true;
+}
+function drawItems(){
+ const arr=(lastData.selected||[]).filter(locallyEligible);
+ const q=val('item_search').toLocaleLowerCase('ru-RU').trim();
+ const filtered=q?arr.filter(c=>String(c.name||'').toLocaleLowerCase('ru-RU').includes(q)):arr.slice();
+ const sort=val('sort_by');filtered.sort((a,b)=>sort==='profit'?(b.profit_rub||0)-(a.profit_rub||0):sort==='sales'?(b.sales_30d||0)-(a.sales_30d||0):sort==='cost'?(a.cost_rub||0)-(b.cost_rub||0):sort==='name'?String(a.name||'').localeCompare(String(b.name||'')):(b.roi_pct||0)-(a.roi_pct||0));
+ const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));pageIndex=Math.max(0,Math.min(pageIndex,totalPages-1));
+ setText('shownCount',`Показано ${filtered.length} из ${arr.length}`);
+ setText('page_label',`Страница ${pageIndex+1} из ${totalPages}`);
+ document.getElementById('page_prev').disabled=pageIndex<=0;
+ document.getElementById('page_next').disabled=pageIndex>=totalPages-1;
+ const body=document.getElementById('results');body.textContent='';const mobile=document.getElementById('mobile_results');mobile.replaceChildren();
+ if(filtered.length===0){const row=document.createElement('tr');row.innerHTML=`<td colspan="14" class="empty">${arr.length===0?'Ничего не прошло фильтры. Измени условия или количество страниц и запусти сканирование снова.':'Нет совпадений с поиском по названию.'}</td>`;body.append(row);const e=document.createElement('p');e.className='empty';e.textContent=arr.length===0?'Нет подходящих предметов — попробуй другой курс или фильтры.':'По этому запросу ничего не найдено';mobile.append(e);return}
+ for(const c of filtered.slice(pageIndex*PAGE_SIZE,(pageIndex+1)*PAGE_SIZE)){
+  const row=document.createElement('tr');
+  const buff=resolveBuffLink(c);
+  const market=resolveMarketLink(c);
+  const status=String(c.status||'Не проверен');
+  const statusClass=status.includes('Подходит')||status==='Проверен'?'pass':status.includes('Нет')?'missing':'reject';
+  const info=c.reason?`${esc(status)}: ${esc(c.reason)}`:esc(status);
+  const buffHTML=buff?`<a class="linkbuff" target="_blank" rel="noopener noreferrer" href="${esc(buff.url)}" title="${esc(buff.note)}">${buff.direct?'Открыть BUFF ↗':'Поиск на BUFF ↗'}</a>`:'<span class="hint">Нет ссылки BUFF</span>';
+  const marketHTML=market?`<a target="_blank" rel="noopener noreferrer" href="${esc(market.url)}" title="${esc(market.note)}">${market.direct?'Карточка Market ↗':'Поиск Market ↗'}</a>`:'<span class="hint">Нет прямой ссылки Market</span>';
+  row.innerHTML=`<td>${esc(c.name)}</td><td>${esc(c.game)}</td><td>${nfmt(c.buff_cny)}</td><td>${nfmt(c.cost_rub)}</td><td class="price">${nfmt(c.market_min_rub)}</td><td class="price">${nfmt(c.average_30d_rub)}</td><td class="num" title="Модель: ${esc(c.price_method||'неизвестна')}">${nfmt(c.sale_rub)}</td><td>${nfmt(c.profit_rub)}</td><td>${nfmt(c.roi_pct)}${Number(c.roi_pct)?'%':''}</td><td>${Number(c.sales_7d)||'—'}</td><td>${Number(c.sales_30d)||'—'}</td><td><span class="tag ${statusClass}" title="${esc(c.reason||'')}">${info}</span></td><td>${buffHTML}</td><td>${marketHTML}</td>`;
+  body.append(row);
+  // Mobile cards show the same filtered candidates as the desktop table.
+  const card=document.createElement('article');card.className='skin-card';
+  const profitPct=Number(c.roi_pct).toFixed(1);
+  const vals=[['BUFF',nfmt(c.buff_cny)+' ¥'],['Себестоимость',nfmt(c.cost_rub)+' ₽'],['Ожидаемая продажа',nfmt(c.sale_rub)+' ₽'],['Прибыль',nfmt(c.profit_rub)+' ₽ ('+profitPct+'%)'],['Продажи за 30д',String(c.sales_30d||0)],['Мин. Market',nfmt(c.market_min_rub)+' ₽']];
+  const links=[];
+  if(buff)links.push('<a class="linkbuff" target="_blank" rel="noopener noreferrer" href="'+esc(buff.url)+'">'+(buff.direct?'BUFF ↗':'Поиск BUFF ↗')+'</a>');
+  if(market)links.push('<a target="_blank" rel="noopener noreferrer" href="'+esc(market.url)+'">Market ↗</a>');
+  card.innerHTML='<div class="skin-title">'+esc(c.name)+'</div><div class="skin-stats">'+vals.map((x,i)=>'<div class="skin-stat '+(i===3?'positive':'')+'">'+esc(x[0])+'<strong>'+esc(x[1])+'</strong></div>').join('')+'</div><div class="skin-links">'+links.join('')+'</div>';
+  mobile.append(card);
+ }
+}
+// Ссылки сверяются с игрой и типом страницы, чтобы не открывать общие категории
+// или Dota вместо CS2. Не пытаемся превращать произвольный itemMarketId в URL.
+function itemGame(c){
+ const g=String(c.game||'').trim().toLowerCase();
+ if(['cs2','csgo','cs','counter-strike 2','730'].includes(g))return 'csgo';
+ if(['dota','dota2','dota 2','570'].includes(g))return 'dota2';
+ return '';
+}
+function parsedAllowed(s,host){
+ const link=safeURL(s);
+ if(!link)return null;
+ try{const u=new URL(link);return u.hostname===host?u:null}catch{return null}
+}
+function hasWrongGame(u,expected){
+ const all=[u.pathname,u.search,u.hash].join(' ').toLowerCase();
+ const other=expected==='csgo'?'dota2':'csgo';
+ return all.includes('/market/'+other)||/[?&#]game=(?:csgo|dota2)/i.test(all)&&!new RegExp('[?&#]game='+expected+'(?:[&#]|$)','i').test(all);
+}
+function resolveBuffLink(c){
+ const game=itemGame(c),name=String(c.name||'').trim();
+ if(!game||!name)return null;
+ const raw=parsedAllowed(c.buff_url,'buff.163.com');
+ if(raw && /^\/goods\/\d+\/?$/i.test(raw.pathname) && !hasWrongGame(raw,game)){
+  return {url:raw.href,direct:true,note:'Прямая карточка BUFF из Pulse'};
+ }
+ // При категории, неверной игре или отсутствии goods ID открываем поиск по
+ // ТОЧНОМУ названию в правильном разделе, явно помечая ссылку как поиск.
+ return {url:`https://buff.163.com/market/${game}#tab=selling&search=${encodeURIComponent(name)}`,
+         direct:false,note:'Поиск предмета в разделе '+(game==='csgo'?'CS2':'Dota2')+' BUFF, не конкретный лот'};
+}
+function resolveMarketLink(c){
+ const game=itemGame(c),name=String(c.name||'').trim();
+ if(!game||!name)return null;
+ if(game==='csgo'){
+  // У Market.CSGO есть проверенные страницы предметов по market_hash_name:
+  // /en/<URL-encoded market_hash_name>; обычный marketUrl Pulse может вести в каталог.
+  return {url:'https://market.csgo.com/en/'+encodeURIComponent(name),
+          direct:true,note:'Карточка этого предмета на Market.CSGO (по названию)'};
+ }
+ const raw=parsedAllowed(c.market_url,'market.dota2.net');
+ if(raw && /^\/item\/\d+[-_]\d+(?:[-/]|$)/i.test(raw.pathname) && !hasWrongGame(raw,game)){
+  return {url:raw.href,direct:true,note:'Прямая карточка предмета Market.Dota2 из Pulse'};
+ }
+ // Для Market.Dota2 нельзя выводить точную карточку из одного лишь названия:
+ // требуется classid + instanceid или подтвержденная ссылка на /item/...
+ return null;
+}
+function updatePickers(data){
+ const items=data.selected||[];
+ for(const field of ['item_type','quality']){
+  const el=document.getElementById(field),chosen=el.value;
+  const label=field==='item_type'?'Все типы':'Любое качество';
+  const metaValues=field==='item_type'?data.available_types:data.available_qualities;
+  const available=[...new Set((metaValues||items.map(c=>c[field])).map(x=>String(x||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  el.replaceChildren(new Option(label,''));for(const x of available)el.add(new Option(x,x));
+  ensureOption(field,chosen);el.value=chosen;
+ }
+ const el=document.getElementById('extra_item'),chosen=el.value;
+ const names=[...new Set(items.filter(c=>c.game===(val('extra_game')==='CsGo'?'cs2':'dota2')).map(c=>String(c.name||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+ el.replaceChildren(new Option('Выбери предмет',''));for(const x of names)el.add(new Option(x,x));
+ ensureOption('extra_item',chosen);el.value=chosen;
+}
+function render(data){
+ lastData=data||{selected:[]};updatePickers(lastData);pageIndex=0;drawItems();setText('notice',data.notice||'');
+ const stats=[['BUFF записей',data.base_rows||0],['Market записей',data.market_rows||0],['Совпало',data.matched||0],['Без пары',data.unmatched||0],['Есть цены',data.price_ready||0],['Цена ≥ минимума',data.cost_passed||0],['Продаж достаточно',data.sales_passed||0],['ROI прошёл',data.roi_passed||0],['Отфильтровано',data.excluded_count||0],['Показано',(data.selected||[]).length]];
+ const bar=document.getElementById('counts');bar.textContent='';for(const [label,count] of stats){const span=document.createElement('span');span.textContent=`${label}: ${count}`;bar.append(span)}
+ const reasonSummary=Object.entries(data.reject_stats||{}).sort((a,b)=>b[1]-a[1]).map(([k,n])=>k+': '+n).join(' · ');
+ setText('reject_stats',reasonSummary||'Нет дополнительных причин исключения.');
+ setText('baseshape',JSON.stringify(data.base_shape||{},null,2));
+}
+let last='';let monitoring=false;
+async function refresh(){try{const response=await fetch('/api/status');if(!response.ok)throw Error('HTTP '+response.status);const status=await response.json();monitoring=status.active;setText('monitorBtn',monitoring?'Остановить мониторинг':'Включить мониторинг');const msg=status.running?'Идёт запрос к API...':status.last_error?'Ошибка: '+status.last_error:status.last_run?'Последняя проверка: '+status.last_run+'; сигналов: '+status.selected+(monitoring?'; следующая: '+status.next_run:''):'Пока не запускался';setText('status',msg);if(last!==status.last_run&&!status.running&&!status.last_error){last=status.last_run;const r=await fetch('/api/result');if(r.ok)render(await r.json())}}catch(e){setText('status','Нет связи с агентом. Возможно, EXE закрыт.')}}
+async function toggleMonitor(){try{if(!monitoring&&!cloudAPIReady)throw Error('Введи API-ключ и сначала запусти сканирование');await api('/api/monitor',{active:!monitoring});refresh()}catch(e){setText('status','Ошибка: '+e.message)}}
+function showCost(){const games=val('game')==='both'?2:1;const pages=+val('pages');const extra=document.getElementById('include_market_info').checked?2*games:0;setText('api-cost',`Оценка: ${2*games*pages} запросов BaseInfos + ${extra?games+' MarketInfo':''} = ${4*games*pages+extra} токенов за цикл. Это не обязательно весь рынок.`)}
+for(const id of ['game','pages','page_size','include_market_info'])document.getElementById(id).addEventListener('change',showCost);
+document.getElementById('extra_game').addEventListener('change',()=>updatePickers(lastData));
+for(const id of [...numberIds,'item_type','quality','exclude_sticker','exclude_case','exclude_souvenir'])document.getElementById(id).addEventListener('change',()=>{pageIndex=0;drawItems()});
+showCost();
+(async()=>{
+ try{const response=await fetch('/api/all-settings');if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();
+  for(const id of ids){if(data.settings && data.settings[id]!==undefined)setVal(id,data.settings[id])}
+  for(const id of prefsValue){if(data.prefs && data.prefs[id]!==undefined)setVal(id,data.prefs[id])}
+  for(const id of prefsBool){if(data.prefs && data.prefs[id]!==undefined)document.getElementById(id).checked=!!data.prefs[id]}
+  if(data.settings&&data.settings.blacklist){const old=String(data.settings.blacklist).toLowerCase().split(/[,;\n]+/).map(x=>x.trim());for(const [id,term] of [['exclude_sticker','sticker'],['exclude_case','case'],['exclude_souvenir','souvenir']]){if(old.includes(term))document.getElementById(id).checked=true}}
+  cloudAPIReady=!!data.api_key_configured;
+  document.getElementById('api_key').value='';
+  document.getElementById('api_key').disabled=true;
+  document.getElementById('api_key').placeholder=cloudAPIReady?'Подключён на хостинге':'Укажи PULSE_API_KEY на хостинге';
+  document.getElementById('show_key').hidden=true;
+  document.getElementById('telegram_token').value='';
+  document.getElementById('telegram_token').disabled=true;
+  document.getElementById('telegram_token').placeholder=data.telegram_token_configured?'Настроен на сервере':'Укажи TELEGRAM_BOT_TOKEN на хостинге';
+  try{const persisted=JSON.parse(localStorage.getItem('pulse_mobile_filters_v1')||'null');if(persisted){
+    for(const id of ids){if(persisted.settings&&persisted.settings[id]!==undefined)setVal(id,persisted.settings[id])}
+    for(const id of prefsValue){if(persisted.prefs&&persisted.prefs[id]!==undefined)setVal(id,persisted.prefs[id])}
+    for(const id of prefsBool){if(persisted.prefs&&persisted.prefs[id]!==undefined)document.getElementById(id).checked=!!persisted.prefs[id]}
+  }}catch{}
+  keyState();showCost();
+  setText('save_feedback',cloudAPIReady?'API подключён через сервер. Фильтры сохраняются в браузере телефона.':'API не настроен: добавь PULSE_API_KEY в настройки хостинга.');
+ }catch(e){setText('save_feedback','Не удалось загрузить настройки: '+e.message)}
+ try{const r=await fetch('/api/result');if(r.ok)render(await r.json())}catch{}
+ refresh();setInterval(refresh,2500)
+})();
+</script></body></html>

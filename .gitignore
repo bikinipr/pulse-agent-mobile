@@ -1,0 +1,9 @@
+# Secrets must be configured in the hosting dashboard, not committed here
+.env
+.env.*
+settings.json
+prefs.json
+*.key
+*.exe
+app
+.DS_Store

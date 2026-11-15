@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: pulse-agent-mobile
+    runtime: go
+    plan: free
+    buildCommand: go build -o app .
+    startCommand: ./app
+    healthCheckPath: /health
+    envVars:
+      - key: CLOUD_MODE
+        value: "1"
+      - key: APP_PASSWORD
+        sync: false
+      - key: PULSE_API_KEY
+        sync: false
