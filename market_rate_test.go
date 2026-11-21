@@ -1,6 +1,7 @@
 package main
 
 import (
+    "context"
     "io"
     "net/http"
     "strings"
@@ -48,11 +49,11 @@ func TestMarketRequestsBlockedBeforeHTTP(t *testing.T) {
     fake:=&fakeMarketTransport{}
     client:=&http.Client{Transport:fake}
     for i:=0;i<5;i++ {
-        if _,err:=marketGet(t.Context(),client,"market.csgo.com","/api/v2/items","example-test-key",1024);err!=nil {
+        if _,err:=marketGet(context.Background(),client,"market.csgo.com","/api/v2/items","example-test-key",1024);err!=nil {
             t.Fatalf("request %d should be allowed: %v",i+1,err)
         }
     }
-    if _,err:=marketGet(t.Context(),client,"market.dota2.net","/api/v2/items","example-test-key",1024);err==nil {
+    if _,err:=marketGet(context.Background(),client,"market.dota2.net","/api/v2/items","example-test-key",1024);err==nil {
         t.Fatal("sixth request must be skipped across both Market hosts")
     }
     if n:=fake.sent.Load();n!=5 {t.Fatalf("transport sent %d requests, want 5",n)}
