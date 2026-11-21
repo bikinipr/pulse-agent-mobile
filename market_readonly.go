@@ -51,6 +51,36 @@ var salesTracker struct {
 }
 const salesCacheTime = 120 * time.Second
 
+// A single shared, sliding-window budget for ALL Market API calls (both
+// accounts, including public prices). Reserving happens BEFORE an HTTP attempt;
+// failed requests still use a slot. No retries and no burst beyond 5/60s.
+const marketRequestCap = 5
+const marketRequestWindow = 60 * time.Second
+
+type marketRequestLimiter struct {
+    sync.Mutex
+    times []time.Time
+}
+var marketRequests marketRequestLimiter
+
+func (l *marketRequestLimiter) reserve(now time.Time) (bool, time.Duration) {
+    l.Lock()
+    defer l.Unlock()
+    recent:=l.times[:0]
+    for _,t:=range l.times {
+        if now.Sub(t)<marketRequestWindow && !now.Before(t) {recent=append(recent,t)}
+    }
+    l.times=recent
+    if len(l.times)>=marketRequestCap {
+        wait:=marketRequestWindow-now.Sub(l.times[0])
+        if wait<time.Second {wait=time.Second}
+        return false,wait
+    }
+    l.times=append(l.times,now)
+    return true,0
+}
+
+
 func (a *App) marketSalesHandler(w http.ResponseWriter,r *http.Request) {
     if r.Method != http.MethodGet {
         http.Error(w,"GET only",http.StatusMethodNotAllowed);return
@@ -154,6 +184,10 @@ func marketGet(ctx context.Context,client *http.Client,host,path,key string,limi
     if e!=nil{return nil,e}
     req.Header.Set("Accept","application/json")
     if key!="" {req.Header.Set("X-API-KEY",key)}
+    ok,wait:=marketRequests.reserve(time.Now())
+    if !ok {
+        return nil,fmt.Errorf("Лимит Market API: не больше 5 запросов за 60 секунд (повтори через %d сек.)",int(math.Ceil(wait.Seconds())))
+    }
     resp,e:=client.Do(req)
     if e!=nil{return nil,errors.New("Market API недоступен")}
     defer resp.Body.Close()
@@ -163,50 +197,90 @@ func marketGet(ctx context.Context,client *http.Client,host,path,key string,limi
     if int64(len(b))>limit{return nil,errors.New("Ответ Market слишком большой")}
     return b,nil
 }
-func fetchMarketSales(ctx context.Context) marketTrackerData{
+// Fetch each connected account's own listings BEFORE spending the remaining
+// budget on optional public prices. This keeps CS2 and Dota 2 fair when both
+// accounts are connected. Price quotes are attempted in RUB, USD, EUR order.
+// When 5 calls have already been reserved, optional quote fetching is skipped.
+type marketAccountState struct {
+    source marketSourceStatus
+    host string
+    listings []marketSaleRow
+    names map[string]map[string]struct{}
+}
+func fetchMarketSales(ctx context.Context) marketTrackerData {
     out:=marketTrackerData{GeneratedAt:time.Now().UTC().Format(time.RFC3339),Listings:[]marketSaleRow{},Sources:[]marketSourceStatus{}}
     client:=&http.Client{Timeout:22*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
     hosts:=[]struct{market,host,keyVar string}{
         {"CS2","market.csgo.com","MARKET_CSGO_API_KEY"},
         {"Dota 2","market.dota2.net","MARKET_DOTA2_API_KEY"},
     }
+    accounts:=make([]marketAccountState,0,len(hosts))
     for _,src:=range hosts {
         key:=strings.TrimSpace(os.Getenv(src.keyVar))
-        st:=marketSourceStatus{Market:src.market,Connected:key!=""}
-        if key==""{
-            st.Error="Не настроен ключ "+src.keyVar+" в Render"
-            out.Sources=append(out.Sources,st);continue
+        acc:=marketAccountState{
+            source:marketSourceStatus{Market:src.market,Connected:key!=""},
+            host:src.host,
+            names:make(map[string]map[string]struct{}),
+        }
+        if key=="" {
+            acc.source.Error="Не настроен ключ "+src.keyVar+" в Render"
+            accounts=append(accounts,acc)
+            continue
         }
         b,e:=marketGet(ctx,client,src.host,"/api/v2/items",key,16<<20)
-        if e!=nil{st.Error=e.Error();out.Sources=append(out.Sources,st);continue}
+        if e!=nil {
+            acc.source.Error=e.Error()
+            accounts=append(accounts,acc)
+            continue
+        }
         items,e:=parsePersonalListing(b,src.market)
-        if e!=nil{st.Error=e.Error();out.Sources=append(out.Sources,st);continue}
-        st.Count=len(items)
-        want:=make(map[string]map[string]struct{})
+        if e!=nil {
+            acc.source.Error=e.Error()
+            accounts=append(accounts,acc)
+            continue
+        }
+        acc.source.Count=len(items)
+        acc.listings=items
         for _,v:=range items {
             if v.Status!="1" {continue}
-            if v.Currency!="RUB"&&v.Currency!="USD"&&v.Currency!="EUR"{continue}
-            if want[v.Currency]==nil{want[v.Currency]=make(map[string]struct{})}
-            want[v.Currency][strings.ToLower(strings.TrimSpace(v.Name))]=struct{}{}
+            if v.Currency!="RUB"&&v.Currency!="USD"&&v.Currency!="EUR" {continue}
+            if acc.names[v.Currency]==nil {acc.names[v.Currency]=make(map[string]struct{})}
+            acc.names[v.Currency][strings.ToLower(strings.TrimSpace(v.Name))]=struct{}{}
         }
-        for _,currency:=range []string{"RUB","USD","EUR"} {
-            names:=want[currency];if len(names)==0{continue}
-            b,e=marketGet(ctx,client,src.host,"/api/v2/prices/"+currency+".json","",48<<20)
-            if e!=nil{st.Error="Не удалось сравнить рыночные цены: "+e.Error();continue}
+        accounts=append(accounts,acc)
+    }
+    // Quotes are optional; no polling loop may bypass the same shared limiter.
+    for _,currency:=range []string{"RUB","USD","EUR"} {
+        for i:=range accounts {
+            acc:=&accounts[i]
+            names:=acc.names[currency]
+            if len(names)==0 {continue}
+            b,e:=marketGet(ctx,client,acc.host,"/api/v2/prices/"+currency+".json","",48<<20)
+            if e!=nil {
+                acc.source.Error="Не удалось сравнить цены "+currency+": "+e.Error()
+                continue
+            }
             prices,stamp,err:=parseMarketQuotes(b,names)
-            if err!=nil{st.Error=err.Error();continue}
-            for i:=range items {
-                v:=&items[i]
-                if v.Status!="1"||v.Currency!=currency{continue}
+            if err!=nil {
+                acc.source.Error="Ошибка котировок "+currency+": "+err.Error()
+                continue
+            }
+            for j:=range acc.listings {
+                v:=&acc.listings[j]
+                if v.Status!="1" || v.Currency!=currency {continue}
                 p:=prices[strings.ToLower(strings.TrimSpace(v.Name))]
                 if p>0 {
-                    v.HasQuote=true;v.LowestPrice=p;v.PriceCheckedAt=stamp
+                    v.HasQuote=true
+                    v.LowestPrice=p
+                    v.PriceCheckedAt=stamp
                     v.IsBelow=p+0.009<v.Price
                 }
             }
         }
-        out.Listings=append(out.Listings,items...)
-        out.Sources=append(out.Sources,st)
+    }
+    for _,acc:=range accounts {
+        out.Listings=append(out.Listings,acc.listings...)
+        out.Sources=append(out.Sources,acc.source)
     }
     return out
 }
