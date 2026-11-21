@@ -174,29 +174,60 @@ func parsePersonalListing(raw []byte,market string) ([]marketSaleRow,error) {
     return res,nil
 }
 func parseMarketQuotes(raw []byte, names map[string]struct{}) (map[string]float64,string,error) {
+    // Market public price feeds may use an object keyed by class/instance ID
+    // or item name, as well as an array. Both formats are read-only.
     var d struct {
         Success bool `json:"success"`
         Time any `json:"time"`
-        Items []struct {
-            Name string `json:"market_hash_name"`
-            Price any `json:"price"`
-        } `json:"items"`
+        Items json.RawMessage `json:"items"`
     }
     dec:=json.NewDecoder(strings.NewReader(string(raw)));dec.UseNumber()
     if e:=dec.Decode(&d);e!=nil{return nil,"",errors.New("неверный формат рыночных цен")}
     if !d.Success{return nil,"",errors.New("Market не предоставил актуальный список цен")}
     prices:=make(map[string]float64)
-    for _,item:=range d.Items{
-        key:=strings.ToLower(strings.TrimSpace(item.Name))
-        if _,ok:=names[key];!ok{continue}
-        price:=marketFloat(item.Price)
+    take:=func(fallback string,rawValue any){
+        name:=fallback
+        priceValue:=rawValue
+        if obj,ok:=rawValue.(map[string]any);ok {
+            if n:=strings.TrimSpace(marketValue(obj["market_hash_name"]));n!="" {name=n}
+            priceValue=obj["price"]
+        }
+        key:=strings.ToLower(strings.TrimSpace(name))
+        if _,ok:=names[key];!ok{return}
+        price:=marketFloat(priceValue)
         if price>0 && (prices[key]==0 || price<prices[key]) {prices[key]=price}
+    }
+    var items any
+    id:=json.NewDecoder(strings.NewReader(string(d.Items)));id.UseNumber()
+    if e:=id.Decode(&items);e!=nil{return nil,"",errors.New("неверный список цен")}
+    switch x:=items.(type) {
+    case []any:
+        for _,entry:=range x {take("",entry)}
+    case map[string]any:
+        for key,entry:=range x {take(key,entry)}
+    default:
+        return nil,"",errors.New("неподдерживаемый формат списка цен")
     }
     stamp:=""
     ts,e:=strconv.ParseInt(marketValue(d.Time),10,64)
     if e==nil && ts>0 {stamp=time.Unix(ts,0).UTC().Format(time.RFC3339)}
     return prices,stamp,nil
 }
+// Market API explicitly supports X-API-KEY. Authentication failures are not
+// silently retried or exposed with secrets in logs or URLs.
+func marketStatusError(status int) error {
+    switch status {
+    case http.StatusUnauthorized:
+        return errors.New("HTTP 401: Market отклонил API-ключ. Проверь, что это действующий ключ именно этой площадки; перевыпусти его и обнови переменную MARKET_DOTA2_API_KEY или MARKET_CSGO_API_KEY в Render")
+    case http.StatusForbidden:
+        return errors.New("HTTP 403: для API-ключа нет доступа к этому методу или аккаунту")
+    case http.StatusTooManyRequests:
+        return errors.New("HTTP 429: превышен лимит запросов Market API; новые запросы к площадке временно ограничены")
+    default:
+        return fmt.Errorf("HTTP %d от Market API",status)
+    }
+}
+
 func marketGet(ctx context.Context,client *http.Client,host,path,key string,limit int64) ([]byte,error){
     if host!="market.csgo.com" && host!="market.dota2.net" {return nil,errors.New("Неверный хост")}
     req,e:=http.NewRequestWithContext(ctx,http.MethodGet,"https://"+host+path,nil)
@@ -209,7 +240,7 @@ func marketGet(ctx context.Context,client *http.Client,host,path,key string,limi
     resp,e:=client.Do(req)
     if e!=nil{return nil,errors.New("Market API недоступен")}
     defer resp.Body.Close()
-    if resp.StatusCode!=http.StatusOK {return nil,fmt.Errorf("HTTP %d от Market API",resp.StatusCode)}
+    if resp.StatusCode!=http.StatusOK {return nil,marketStatusError(resp.StatusCode)}
     b,e:=io.ReadAll(io.LimitReader(resp.Body,limit+1))
     if e!=nil{return nil,errors.New("Не удалось прочитать ответ Market")}
     if int64(len(b))>limit{return nil,errors.New("Ответ Market слишком большой")}
