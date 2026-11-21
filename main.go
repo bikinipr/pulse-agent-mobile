@@ -1179,6 +1179,7 @@ func (a *App) routes(mux *http.ServeMux) {
 		jsonResponse(w, 200, status)
 	})
 	mux.HandleFunc("/api/sales-tracker", a.marketSalesHandler)
+	mux.HandleFunc("/api/market-diagnostics", a.marketDiagnosticHandler)
 	mux.HandleFunc("/api/result", func(w http.ResponseWriter, r *http.Request) {
 		a.mu.Lock()
 		v := a.latest
