@@ -51,11 +51,12 @@ var salesTracker struct {
 }
 const salesCacheTime = 120 * time.Second
 
-// A single shared, sliding-window budget for ALL Market API calls (both
-// accounts, including public prices). Reserving happens BEFORE an HTTP attempt;
-// failed requests still use a slot. No retries and no burst beyond 5/60s.
-const marketRequestCap = 5
-const marketRequestWindow = 60 * time.Second
+// One shared rolling 1-second rate limit for all Market API calls on this
+// server (CS2 + Dota 2, listings + public prices). We deliberately use only
+// 4 out of the permitted 5 requests per second to provide safety headroom.
+// Calls queue instead of being dropped. Every HTTP attempt consumes a slot.
+const marketRequestCap = 4
+const marketRequestWindow = time.Second
 
 type marketRequestLimiter struct {
     sync.Mutex
@@ -73,13 +74,31 @@ func (l *marketRequestLimiter) reserve(now time.Time) (bool, time.Duration) {
     l.times=recent
     if len(l.times)>=marketRequestCap {
         wait:=marketRequestWindow-now.Sub(l.times[0])
-        if wait<time.Second {wait=time.Second}
+        if wait<time.Millisecond {wait=time.Millisecond}
         return false,wait
     }
     l.times=append(l.times,now)
     return true,0
 }
 
+
+// acquire waits in a shared queue until the 1-second request budget
+// permits another request. The mutex makes reservation safe for concurrent
+// clients. Waiting respects cancelled requests and makes no network calls.
+func (l *marketRequestLimiter) acquire(ctx context.Context) error {
+    for {
+        ok,delay:=l.reserve(time.Now())
+        if ok {return nil}
+        if delay<time.Millisecond {delay=time.Millisecond}
+        timer:=time.NewTimer(delay)
+        select {
+        case <-ctx.Done():
+            timer.Stop()
+            return ctx.Err()
+        case <-timer.C:
+        }
+    }
+}
 
 func (a *App) marketSalesHandler(w http.ResponseWriter,r *http.Request) {
     if r.Method != http.MethodGet {
@@ -184,9 +203,8 @@ func marketGet(ctx context.Context,client *http.Client,host,path,key string,limi
     if e!=nil{return nil,e}
     req.Header.Set("Accept","application/json")
     if key!="" {req.Header.Set("X-API-KEY",key)}
-    ok,wait:=marketRequests.reserve(time.Now())
-    if !ok {
-        return nil,fmt.Errorf("Лимит Market API: не больше 5 запросов за 60 секунд (повтори через %d сек.)",int(math.Ceil(wait.Seconds())))
+    if e:=marketRequests.acquire(ctx);e!=nil {
+        return nil,errors.New("Ожидание лимита Market API отменено")
     }
     resp,e:=client.Do(req)
     if e!=nil{return nil,errors.New("Market API недоступен")}
@@ -200,7 +218,7 @@ func marketGet(ctx context.Context,client *http.Client,host,path,key string,limi
 // Fetch each connected account's own listings BEFORE spending the remaining
 // budget on optional public prices. This keeps CS2 and Dota 2 fair when both
 // accounts are connected. Price quotes are attempted in RUB, USD, EUR order.
-// When 5 calls have already been reserved, optional quote fetching is skipped.
+// If the burst budget is full, each subsequent request waits for an available slot.
 type marketAccountState struct {
     source marketSourceStatus
     host string
