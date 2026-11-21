@@ -19,29 +19,29 @@ import (
 // the user's own active listings, the latter provides public price analytics.
 // This module is strictly read-only; no set-price or trading requests.
 type marketSaleRow struct {
-    ID string \`json:"id"\`
-    Market string \`json:"market"\`
-    Name string \`json:"name"\`
-    Status string \`json:"status"\`
-    Price float64 \`json:"price"\`
-    Currency string \`json:"currency"\`
-    QueuePosition int \`json:"queue_position"\`
-    LowestPrice float64 \`json:"lowest_price,omitempty"\`
-    PriceCheckedAt string \`json:"price_checked_at,omitempty"\`
-    IsBelow bool \`json:"is_below"\`
-    HasQuote bool \`json:"has_quote"\`
+    ID string `json:"id"`
+    Market string `json:"market"`
+    Name string `json:"name"`
+    Status string `json:"status"`
+    Price float64 `json:"price"`
+    Currency string `json:"currency"`
+    QueuePosition int `json:"queue_position"`
+    LowestPrice float64 `json:"lowest_price,omitempty"`
+    PriceCheckedAt string `json:"price_checked_at,omitempty"`
+    IsBelow bool `json:"is_below"`
+    HasQuote bool `json:"has_quote"`
 }
 type marketSourceStatus struct {
-    Market string \`json:"market"\`
-    Connected bool \`json:"connected"\`
-    Count int \`json:"count"\`
-    Error string \`json:"error,omitempty"\`
+    Market string `json:"market"`
+    Connected bool `json:"connected"`
+    Count int `json:"count"`
+    Error string `json:"error,omitempty"`
 }
 type marketTrackerData struct {
-    GeneratedAt string \`json:"generated_at"\`
-    Listings []marketSaleRow \`json:"listings"\`
-    Sources []marketSourceStatus \`json:"sources"\`
-    Cached bool \`json:"cached"\`
+    GeneratedAt string `json:"generated_at"`
+    Listings []marketSaleRow `json:"listings"`
+    Sources []marketSourceStatus `json:"sources"`
+    Cached bool `json:"cached"`
 }
 var salesTracker struct {
     sync.Mutex
@@ -98,15 +98,15 @@ func marketInt(v any) int {
 }
 func parsePersonalListing(raw []byte,market string) ([]marketSaleRow,error) {
     var d struct {
-        Success bool \`json:"success"\`
+        Success bool `json:"success"`
         Items []struct {
-            ID any \`json:"item_id"\`
-            Name string \`json:"market_hash_name"\`
-            Status any \`json:"status"\`
-            Price any \`json:"price"\`
-            Currency string \`json:"currency"\`
-            Position any \`json:"position"\`
-        } \`json:"items"\`
+            ID any `json:"item_id"`
+            Name string `json:"market_hash_name"`
+            Status any `json:"status"`
+            Price any `json:"price"`
+            Currency string `json:"currency"`
+            Position any `json:"position"`
+        } `json:"items"`
     }
     dec:=json.NewDecoder(strings.NewReader(string(raw)));dec.UseNumber()
     if e:=dec.Decode(&d);e!=nil{return nil,errors.New("неверный формат списка объявлений")}
@@ -126,12 +126,12 @@ func parsePersonalListing(raw []byte,market string) ([]marketSaleRow,error) {
 }
 func parseMarketQuotes(raw []byte, names map[string]struct{}) (map[string]float64,string,error) {
     var d struct {
-        Success bool \`json:"success"\`
-        Time any \`json:"time"\`
+        Success bool `json:"success"`
+        Time any `json:"time"`
         Items []struct {
-            Name string \`json:"market_hash_name"\`
-            Price any \`json:"price"\`
-        } \`json:"items"\`
+            Name string `json:"market_hash_name"`
+            Price any `json:"price"`
+        } `json:"items"`
     }
     dec:=json.NewDecoder(strings.NewReader(string(raw)));dec.UseNumber()
     if e:=dec.Decode(&d);e!=nil{return nil,"",errors.New("неверный формат рыночных цен")}
