@@ -2,6 +2,8 @@ package main
 
 import (
     "context"
+    "crypto/sha256"
+    "encoding/hex"
     "encoding/json"
     "errors"
     "fmt"
@@ -98,6 +100,100 @@ func (l *marketRequestLimiter) acquire(ctx context.Context) error {
         case <-timer.C:
         }
     }
+}
+
+
+// An explicit, read-only, authenticated diagnostic for separating a 401 from
+// Pulse Agent's Basic Auth and a 401 returned by the external Market API.
+// It is never called automatically, reads only two status responses on click,
+// and never exposes the API key or any balance / inventory values.
+type marketProbeStatus struct {
+    Endpoint string `json:"endpoint"`
+    HTTPStatus int `json:"http_status,omitempty"`
+    APISuccess bool `json:"api_success"`
+    Error string `json:"error,omitempty"`
+}
+
+func diagnosticMarketProbe(ctx context.Context,client *http.Client,host,path,key string) marketProbeStatus {
+    p:=marketProbeStatus{Endpoint:path}
+    if e:=marketRequests.acquire(ctx);e!=nil {
+        p.Error="Проверка отменена при ожидании лимита запросов"
+        return p
+    }
+    req,e:=http.NewRequestWithContext(ctx,http.MethodGet,"https://"+host+path,nil)
+    if e!=nil{p.Error="Ошибка создания запроса";return p}
+    req.Header.Set("Accept","application/json")
+    req.Header.Set("X-API-KEY",key)
+    resp,e:=client.Do(req)
+    if e!=nil {p.Error="Не удалось подключиться к Market API";return p}
+    defer resp.Body.Close()
+    p.HTTPStatus=resp.StatusCode
+    if resp.StatusCode!=http.StatusOK {
+        p.Error=marketStatusError(resp.StatusCode).Error()
+        return p
+    }
+    // Only inspect the success flag, never return the full private response.
+    var decoded struct {Success *bool `json:"success"`}
+    decoder:=json.NewDecoder(io.LimitReader(resp.Body,16<<20))
+    if e:=decoder.Decode(&decoded);e!=nil{
+        p.Error="HTTP 200, но сервер вернул некорректный JSON"
+    }else if decoded.Success==nil{
+        p.Error="HTTP 200 без поля success: требуется сверить формат ответа"
+    }else if !*decoded.Success{
+        p.Error="HTTP 200, но Market вернул success=false"
+    }else{
+        p.APISuccess=true
+    }
+    return p
+}
+func (a *App) marketDiagnosticHandler(w http.ResponseWriter,r *http.Request) {
+    if r.Method!=http.MethodGet {http.Error(w,"GET only",http.StatusMethodNotAllowed);return}
+    platform:=r.URL.Query().Get("platform")
+    host,varName:="",""
+    switch platform {
+    case "dota2":
+        host="market.dota2.net";varName="MARKET_DOTA2_API_KEY"
+    case "csgo":
+        host="market.csgo.com";varName="MARKET_CSGO_API_KEY"
+    default:
+        jsonResponse(w,400,map[string]string{"error":"Укажи platform=dota2 или platform=csgo"});return
+    }
+    key:=strings.TrimSpace(os.Getenv(varName))
+    data:=map[string]any{
+        "origin":"Pulse Agent server",
+        "platform":platform,
+        "market_host":host,
+        "variable":varName,
+        "key_configured":key!="",
+        "auth_method":"X-API-KEY",
+        "rate_limit":"4 requests per second shared across CS2 and Dota2",
+    }
+    if key=="" {
+        data["problem"]="В Render отсутствует ключ этой площадки. Тестовые запросы не выполнялись."
+        jsonResponse(w,200,data);return
+    }
+    fingerprint:=sha256.Sum256([]byte(key))
+    // A short non-reversible marker lets the user verify whether a new key
+    // actually reached Render, without exposing the key itself.
+    data["key_revision"]=hex.EncodeToString(fingerprint[:])[:8]
+    client:=&http.Client{Timeout:18*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
+    // Both endpoints are GET and cannot buy, sell, or change account state.
+    aResult:=diagnosticMarketProbe(r.Context(),client,host,"/api/v2/get-money",key)
+    bResult:=diagnosticMarketProbe(r.Context(),client,host,"/api/v2/items",key)
+    data["account_check"]=aResult
+    data["listings_check"]=bResult
+    if aResult.HTTPStatus==401 && bResult.HTTPStatus==401 {
+        data["problem"]="Market вернул 401 на обоих запросах. Неверный/отозванный ключ, не та площадка или ограничение на стороне Market."
+    }else if aResult.APISuccess && bResult.HTTPStatus==401 {
+        data["problem"]="Ключ принят методом get-money, но метод items вернул 401: проблема с разрешением на метод или его доступностью."
+    }else if aResult.APISuccess && bResult.APISuccess {
+        data["problem"]="Авторизация Market работает. Если в главной вкладке всё ещё 401, проверь авторизацию Pulse Agent или кеш."
+    }else if aResult.HTTPStatus==0 || bResult.HTTPStatus==0 {
+        data["problem"]="Один или оба запроса не дошли до API Market: проверь сетевую доступность."
+    }else{
+        data["problem"]="Сравни статусы двух запросов: данные поступили непосредственно от Market."
+    }
+    jsonResponse(w,200,data)
 }
 
 func (a *App) marketSalesHandler(w http.ResponseWriter,r *http.Request) {
