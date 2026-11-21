@@ -182,6 +182,11 @@ func (a *App) marketDiagnosticHandler(w http.ResponseWriter,r *http.Request) {
     bResult:=diagnosticMarketProbe(r.Context(),client,host,"/api/v2/items",key)
     data["account_check"]=aResult
     data["listings_check"]=bResult
+    if bResult.APISuccess {
+        marketAuthPermit(host,key)
+    }else if bResult.HTTPStatus==http.StatusUnauthorized {
+        marketAuthReject(host,key)
+    }
     if aResult.HTTPStatus==401 && bResult.HTTPStatus==401 {
         data["problem"]="Market вернул 401 на обоих запросах. Неверный/отозванный ключ, не та площадка или ограничение на стороне Market."
     }else if aResult.APISuccess && bResult.HTTPStatus==401 {
@@ -311,10 +316,40 @@ func parseMarketQuotes(raw []byte, names map[string]struct{}) (map[string]float6
 }
 // Market API explicitly supports X-API-KEY. Authentication failures are not
 // silently retried or exposed with secrets in logs or URLs.
+// Market does not document automatic renewal of a permanent API key.
+// Avoid repeated 401 requests until its server-side value changes, or
+// a deliberate read-only diagnostic confirms the same key is valid again.
+// Only SHA-256 digests are held in process memory, never secret values.
+var errMarketUnauthorized = errors.New("HTTP 401: Market отклонил API-ключ")
+var marketAuthGate = struct {
+    sync.Mutex
+    rejected map[string][32]byte
+}{rejected:make(map[string][32]byte)}
+
+func marketAuthBlocked(host,key string) bool {
+    marketAuthGate.Lock()
+    defer marketAuthGate.Unlock()
+    digest,seen:=marketAuthGate.rejected[host]
+    return seen && digest==sha256.Sum256([]byte(key))
+}
+func marketAuthReject(host,key string) {
+    marketAuthGate.Lock()
+    defer marketAuthGate.Unlock()
+    marketAuthGate.rejected[host]=sha256.Sum256([]byte(key))
+}
+func marketAuthPermit(host,key string) {
+    marketAuthGate.Lock()
+    defer marketAuthGate.Unlock()
+    digest,seen:=marketAuthGate.rejected[host]
+    if seen && digest==sha256.Sum256([]byte(key)) {
+        delete(marketAuthGate.rejected,host)
+    }
+}
+
 func marketStatusError(status int) error {
     switch status {
     case http.StatusUnauthorized:
-        return errors.New("HTTP 401: Market отклонил API-ключ. Проверь, что это действующий ключ именно этой площадки; перевыпусти его и обнови переменную MARKET_DOTA2_API_KEY или MARKET_CSGO_API_KEY в Render")
+        return fmt.Errorf("%w. Проверь ключ этой площадки и переменную MARKET_DOTA2_API_KEY или MARKET_CSGO_API_KEY в Render", errMarketUnauthorized)
     case http.StatusForbidden:
         return errors.New("HTTP 403: для API-ключа нет доступа к этому методу или аккаунту")
     case http.StatusTooManyRequests:
@@ -372,12 +407,21 @@ func fetchMarketSales(ctx context.Context) marketTrackerData {
             accounts=append(accounts,acc)
             continue
         }
+        if marketAuthBlocked(src.host,key) {
+            acc.source.Error="Market ранее вернул HTTP 401. Повторные запросы приостановлены. После изменения ключа в Render агент автоматически попробует новый. Для проверки прежнего ключа используй «Проверить авторизацию»."
+            accounts=append(accounts,acc)
+            continue
+        }
         b,e:=marketGet(ctx,client,src.host,"/api/v2/items",key,16<<20)
         if e!=nil {
+            if errors.Is(e,errMarketUnauthorized) {
+                marketAuthReject(src.host,key)
+            }
             acc.source.Error=e.Error()
             accounts=append(accounts,acc)
             continue
         }
+        marketAuthPermit(src.host,key)
         items,e:=parsePersonalListing(b,src.market)
         if e!=nil {
             acc.source.Error=e.Error()
