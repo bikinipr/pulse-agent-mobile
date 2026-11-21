@@ -15,9 +15,10 @@
 <h2>Мои продажи · данные Market API</h2>
 <p class="hint">Этот раздел загружает твои объявления из API Market.CSGO и Market.Dota2, а затем сравнивает цены с опубликованными минимальными предложениями. Вручную добавлять предметы не нужно. Агент не размещает объявления и не изменяет их стоимость.</p>
 <div class="info-bar"><span id="sales_active">На продаже: —</span><span id="sales_lower">Минимальная цена ниже: —</span><span id="sales_sold">После продажи: —</span></div>
-<div class="actions"><button type="button" onclick="loadMarketSales()">Проверить через API</button></div>
+<div class="actions"><button type="button" onclick="loadMarketSales()">Обновить объявления</button><button type="button" class="secondary" onclick="diagnoseMarket('dota2')">Проверить авторизацию Dota 2</button><button type="button" class="secondary" onclick="diagnoseMarket('csgo')">Проверить авторизацию CS2</button></div>
 <p class="hint">Для доступа к личным объявлениям укажи в Render отдельные серверные переменные <code>MARKET_CSGO_API_KEY</code> и/или <code>MARKET_DOTA2_API_KEY</code>. Ключ Pulse не подходит. Не вводи эти ключи на странице.</p>
 <p id="sales_message" class="hint" role="status" aria-live="polite">Для первой загрузки открой вкладку «Мои продажи».</p>
+<pre id="market_diagnostics" role="status" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere">Для проверки ошибки 401 нажми «Проверить авторизацию Dota 2». Проверка выполняется только по нажатию и делает два безопасных запроса чтения.</pre>
 <div id="sales_sources" class="info-bar"></div>
 <div id="sales_list"></div>
 <p class="hint">«Минимальная цена ниже» означает сравнение обычных предложений по названию, без учёта редкого float или других индивидуальных особенностей. Для безопасности API-ключа запросы к Market API идут через единую очередь: максимум 4 запроса за любую секунду (CS2 + Dota 2, включая получение цен). Это ниже лимита площадки 5 запросов в секунду. Проверка в пределах 2 минут использует серверный кеш. На бесплатном Render непрерывная фоновая работа не гарантируется.</p>
@@ -325,12 +326,41 @@ function salePrice(n,currency){
  return Number.isFinite(f)?f.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+String(currency||'RUB'):'—';
 }
 function saleUpdatedAt(s){const d=new Date(s);return s&&!isNaN(d.valueOf())?d.toLocaleString('ru-RU'):'—'}
+
+async function diagnoseMarket(platform){
+ const box=document.getElementById('market_diagnostics');
+ box.textContent='Проверяю авторизацию Market API на сервере…';
+ try {
+   const url='/api/market-diagnostics?platform='+encodeURIComponent(platform);
+   const r=await fetch(url,{cache:'no-store'});
+   if(r.status===401){
+     box.textContent='HTTP 401 от самого Pulse Agent. Это не отказ Market.Dota2: проверь вход в наш сайт (логин admin и пароль приложения в Render).';
+     return;
+   }
+   if(!r.ok)throw Error('HTTP '+r.status+' от Pulse Agent');
+   const x=await r.json();
+   const describe=(o)=>!o?'не проверено':o.http_status?'HTTP '+o.http_status+(o.api_success?' · success=true':'')+(o.error?' · '+o.error:''):'Нет HTTP-ответа'+(o.error?' · '+o.error:'');
+   box.textContent=[
+      'Источник ответа: '+String(x.origin||'Pulse Agent'),
+      'Площадка: '+String(x.market_host||''),
+      'Ключ в Render: '+(x.key_configured?'обнаружен':'НЕ НАСТРОЕН'),
+      'Отпечаток текущего ключа: '+String(x.key_revision||'—')+' (не сам ключ)',
+      'Тест авторизации аккаунта (get-money): '+describe(x.account_check),
+      'Тест списка объявлений (items): '+describe(x.listings_check),
+      'Итог: '+String(x.problem||'Неизвестен')
+   ].join('\n');
+ } catch(e){
+   box.textContent='Не удалось получить диагностические данные от Pulse Agent: '+e.message;
+ }
+}
+
 async function loadMarketSales(){
  const msg=document.getElementById('sales_message');
  msg.textContent='Читаю объявления и рыночные цены через API…';
  try{
   const resp=await fetch('/api/sales-tracker',{cache:'no-store'});
-  if(!resp.ok)throw Error('HTTP '+resp.status);
+  if(resp.status===401)throw Error('401 от самого Pulse Agent: повторно войди под admin (это не ошибка Market API)');
+  if(!resp.ok)throw Error('HTTP '+resp.status+' от Pulse Agent');
   const data=await resp.json();
   const listings=Array.isArray(data.listings)?data.listings:[];
   const active=listings.filter(x=>x.status==='1');
