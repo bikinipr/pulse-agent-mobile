@@ -6,8 +6,30 @@
 .mobile-results{display:none}
 @media(max-width:800px){body{padding:10px 10px 28px;font-size:14px}header h1{font-size:21px}section{padding:13px;margin:11px 0}h2{font-size:16px}.grid,.grid.two,.filter-panel,.api-cards{grid-template-columns:1fr}.actions button,.api-card button{width:100%}.actions{align-items:stretch;flex-direction:column}.keyline{flex-wrap:wrap}.keyline input{min-width:180px}.desktop-table{display:none}.mobile-results{display:block}.skin-card{padding:14px;border:1px solid #35516a;border-radius:13px;background:#101b2b;margin:10px 0}.skin-title{font-weight:700;font-size:15px;margin-bottom:10px;line-height:1.35}.skin-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.skin-stat{font-size:12px;color:#a9b9cc}.skin-stat strong{display:block;font-size:15px;color:#eef5ff;margin-top:3px}.skin-stat.positive strong{color:#8af0b5}.skin-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.skin-links a{padding:9px 12px;background:#244364;border-radius:8px;text-decoration:none;font-weight:600}.skin-links .linkbuff{background:#1b553c}.searchtools input{max-width:none}#item_search,#sort_by{width:100%;max-width:none!important}#status{overflow-wrap:anywhere}input,select,button{font-size:16px}}
 .scroll{max-width:100%;-webkit-overflow-scrolling:touch}.desktop-table{max-width:100%}@media(max-width:380px){body{padding:8px}section{padding:10px}.keyline input{min-width:0}.skin-stats{grid-template-columns:1fr}.skin-title{overflow-wrap:anywhere}} 
+
+[hidden]{display:none!important}.sale-row{padding:14px;margin:12px 0;border:1px solid #35516a;background:#101b2a;border-radius:12px}.sale-row h3{font-size:15px;overflow-wrap:anywhere;margin:0 0 6px}.sale-row p{margin:6px 0}.sale-row .actions{margin-top:10px}.sale-row details{margin-top:8px}.sale-history{white-space:pre-wrap;overflow-wrap:anywhere}
 </style></head><body>
 <header><div><h1>Pulse Arbitrage Agent <span class="pill">Cloud · ПК + телефон</span></h1><div class="muted">BUFF163 → Market.CSGO / Market.Dota2 · только аналитика и ссылки</div></div><span class="pill">Веб-приложение · телефон и ПК</span></header>
+<nav class="tabbar" aria-label="Разделы приложения"><button type="button" id="nav_market" class="active" onclick="switchModule(false)" aria-pressed="true">Поиск предметов</button><button type="button" id="nav_sales" onclick="switchModule(true)" aria-pressed="false">Мои продажи</button></nav>
+<section id="sales_panel" hidden>
+<h2>Мои продажи</h2>
+<p class="hint">Личный журнал. Записи добавляются и обновляются вручную; операции на торговых площадках не выполняются. Рыночная цена отображается только при наличии совпадения в последних результатах сканирования Pulse. Это не проверка конкурентов в реальном времени.</p>
+<div class="info-bar"><span id="sales_active">На продаже: 0</span><span id="sales_sold">Продано: 0</span><span id="sales_lower">Рыночная цена ниже: 0</span></div>
+<form id="sales_form">
+<input type="hidden" id="sales_id">
+<div class="grid" style="margin-top:14px">
+<div class="field"><label for="sales_name">Точное название предмета</label><input id="sales_name" maxlength="250" required placeholder="Название предмета"></div>
+<div class="field"><label for="sales_game">Игра</label><select id="sales_game"><option value="cs2">CS2</option><option value="dota2">Dota 2</option></select></div>
+<div class="field"><label for="sales_price">Цена, ₽</label><input type="number" id="sales_price" min="0.01" max="1000000000" step="0.01" required></div>
+<div class="field"><label for="sales_status">Статус</label><select id="sales_status"><option value="listed">На продаже</option><option value="sold">Продано</option><option value="withdrawn">Снято</option></select></div>
+</div><div class="actions"><button type="submit" id="sales_submit">Добавить запись</button><button type="button" class="secondary" onclick="resetSaleForm()">Очистить форму</button><button type="button" class="secondary" onclick="loadSales()">Обновить журнал</button><button type="button" class="secondary" onclick="backupSales()">Скачать резервную копию</button></div>
+</form>
+<p id="sales_message" class="hint" role="status" aria-live="polite"></p>
+<div id="sales_list"></div>
+<p class="hint">На бесплатном Render записи хранятся на временном диске: после перезапуска или нового развёртывания они могут исчезнуть. Скачивай резервную копию. Обновление журнала не расходует токены Pulse.</p>
+</section>
+<div id="market_panel">
+
 <section><h2>Единое облачное приложение</h2><p class="hint">Открывай этот HTTPS-адрес на компьютере или телефоне из любой сети. На обоих устройствах используется один сервер и общий список результатов. Сканирование запускается здесь, без EXE. Для защиты аккаунта используется пароль хостинга. API-ключ рекомендуется задавать только в переменной окружения <code>PULSE_API_KEY</code>.</p><p class="hint">На бесплатном сервере приложение может останавливаться после периода бездействия, поэтому непрерывный мониторинг требует постоянно работающего хостинга.</p></section>
 <div class="notice">Данные рынка доступны только с действующим ключом Pulse и при наличии API-токенов. Реальную работу с твоим аккаунтом ещё не проверяли. Сигналы — предварительные оценки, не гарантия будущей цены. Автопокупки отсутствуют.</div>
 <section><h2>1. Быстрые фильтры</h2><div class="grid">
@@ -82,6 +104,7 @@
 <div class="pager"><span id="page_label" class="hint"></span><button type="button" class="secondary" onclick="movePage(-1)" id="page_prev">Назад</button><button type="button" class="secondary" onclick="movePage(1)" id="page_next">Вперёд</button></div>
 <details><summary>Структура данных BaseInfos</summary><pre id="baseshape"></pre></details>
 </section><div class="hint" style="padding:18px">Результаты предварительные. Для постоянного фонового мониторинга нужен работающий сервер.</div>
+</div>
 <script>
 let cloudAPIReady=false;
 let isCloud=true;
@@ -291,4 +314,68 @@ showCost();
  try{const r=await fetch('/api/result',{cache:'no-store'});if(r.ok)render(await r.json())}catch{}
  refresh();setInterval(refresh,2500)
 })();
+
+let salesEntries=[],salesBusy=false,salesLoaded=false;
+const saleLabels={listed:'На продаже',sold:'Продано',withdrawn:'Снято'};
+function switchModule(sales){
+ document.getElementById('sales_panel').hidden=!sales;
+ document.getElementById('market_panel').hidden=sales;
+ for(const [id,active] of [['nav_market',!sales],['nav_sales',sales]]) {
+  const e=document.getElementById(id);e.classList.toggle('active',active);e.setAttribute('aria-pressed',String(active));
+ }
+ if(sales)loadSales();
+}
+function saleDate(s){const d=new Date(s);return s&&!isNaN(d.getTime())?d.toLocaleString('ru-RU'):'—'}
+function salePrice(n){return Number(n).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽'}
+function showSales(data){
+ salesEntries=Array.isArray(data.entries)?data.entries:[];
+ salesLoaded=true;
+ setText('sales_active','На продаже: '+salesEntries.filter(x=>x.status==='listed').length);
+ setText('sales_sold','Продано: '+salesEntries.filter(x=>x.status==='sold').length);
+ setText('sales_lower','Рыночная цена ниже: '+salesEntries.filter(x=>x.status==='listed'&&x.market_min>0&&x.market_min<x.price).length);
+ const list=document.getElementById('sales_list');list.replaceChildren();
+ if(!salesEntries.length){list.textContent='Журнал пуст. Добавь первую запись.';return}
+ for(const entry of salesEntries){
+  const card=document.createElement('article');card.className='sale-row';
+  const title=document.createElement('h3');title.textContent=entry.name;card.append(title);
+  const info=document.createElement('p');info.textContent=(entry.game==='cs2'?'CS2':'Dota 2')+' · '+(saleLabels[entry.status]||'—')+' · '+salePrice(entry.price);card.append(info);
+  if(entry.status==='listed'){
+   const quote=document.createElement('p');
+   if(entry.market_min>0){quote.textContent='Последняя рыночная цена: '+salePrice(entry.market_min)+' · '+saleDate(entry.market_time)+(entry.market_min<entry.price?' · ниже записанной цены':'');quote.className=entry.market_min<entry.price?'warn':'muted';}
+   else{quote.textContent='Нет совпадающей котировки в последних сохранённых результатах.';quote.className='muted'}
+   card.append(quote);
+  }
+  const controls=document.createElement('div');controls.className='actions';
+  for(const [label,action] of [['Изменить запись',()=>editSale(entry)],['Удалить запись',()=>{if(confirm('Удалить запись из журнала?'))mutateSale({action:'delete',id:entry.id})}]]){
+   const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=label;b.addEventListener('click',action);controls.append(b);
+  }
+  card.append(controls);
+  const hist=document.createElement('details');const summary=document.createElement('summary');summary.textContent='История записи';hist.append(summary);
+  const h=document.createElement('p');h.className='sale-history';h.textContent=(entry.history||[]).slice().reverse().map(x=>saleDate(x.at)+' · '+salePrice(x.price)+' · '+(saleLabels[x.status]||'—')).join('\n')||'Нет истории';hist.append(h);card.append(hist);list.append(card);
+ }
+}
+async function loadSales(quiet=false){
+ if(salesBusy)return;salesBusy=true;
+ try{const response=await fetch('/api/sales',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);showSales(await response.json());if(!quiet)setText('sales_message','Журнал загружен с сервера.')}
+ catch(e){setText('sales_message','Не удалось загрузить журнал: '+e.message)}
+ finally{salesBusy=false}
+}
+async function mutateSale(payload){
+ if(salesBusy)return;salesBusy=true;
+ try{showSales(await api('/api/sales',payload));resetSaleForm();setText('sales_message','Запись сохранена на сервере.')}
+ catch(e){setText('sales_message','Ошибка: '+e.message)}
+ finally{salesBusy=false}
+}
+function editSale(entry){
+ setVal('sales_id',entry.id);setVal('sales_name',entry.name);setVal('sales_game',entry.game);setVal('sales_price',entry.price);setVal('sales_status',entry.status);
+ setText('sales_submit','Сохранить изменения');document.getElementById('sales_name').focus();
+}
+function resetSaleForm(){document.getElementById('sales_form').reset();setVal('sales_id','');setText('sales_submit','Добавить запись')}
+function backupSales(){
+ if(!salesLoaded){setText('sales_message','Сначала загрузи журнал.');return}
+ const u=URL.createObjectURL(new Blob([JSON.stringify({entries:salesEntries},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='pulse-sales-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);
+}
+document.getElementById('sales_form').addEventListener('submit',e=>{e.preventDefault();mutateSale({action:'upsert',id:val('sales_id'),name:val('sales_name'),game:val('sales_game'),price:Number(val('sales_price')),status:val('sales_status')})});
+setInterval(()=>{if(!document.getElementById('sales_panel').hidden&&!document.hidden)loadSales(true)},20000);
+
 </script></body></html>
