@@ -12,21 +12,15 @@
 <header><div><h1>Pulse Arbitrage Agent <span class="pill">Cloud · ПК + телефон</span></h1><div class="muted">BUFF163 → Market.CSGO / Market.Dota2 · только аналитика и ссылки</div></div><span class="pill">Веб-приложение · телефон и ПК</span></header>
 <nav class="tabbar" aria-label="Разделы приложения"><button type="button" id="nav_market" class="active" onclick="switchModule(false)" aria-pressed="true">Поиск предметов</button><button type="button" id="nav_sales" onclick="switchModule(true)" aria-pressed="false">Мои продажи</button></nav>
 <section id="sales_panel" hidden>
-<h2>Мои продажи</h2>
-<p class="hint">Личный журнал. Записи добавляются и обновляются вручную; операции на торговых площадках не выполняются. Рыночная цена отображается только при наличии совпадения в последних результатах сканирования Pulse. Это не проверка конкурентов в реальном времени.</p>
-<div class="info-bar"><span id="sales_active">На продаже: 0</span><span id="sales_sold">Продано: 0</span><span id="sales_lower">Рыночная цена ниже: 0</span></div>
-<form id="sales_form">
-<input type="hidden" id="sales_id">
-<div class="grid" style="margin-top:14px">
-<div class="field"><label for="sales_name">Точное название предмета</label><input id="sales_name" maxlength="250" required placeholder="Название предмета"></div>
-<div class="field"><label for="sales_game">Игра</label><select id="sales_game"><option value="cs2">CS2</option><option value="dota2">Dota 2</option></select></div>
-<div class="field"><label for="sales_price">Цена, ₽</label><input type="number" id="sales_price" min="0.01" max="1000000000" step="0.01" required></div>
-<div class="field"><label for="sales_status">Статус</label><select id="sales_status"><option value="listed">На продаже</option><option value="sold">Продано</option><option value="withdrawn">Снято</option></select></div>
-</div><div class="actions"><button type="submit" id="sales_submit">Добавить запись</button><button type="button" class="secondary" onclick="resetSaleForm()">Очистить форму</button><button type="button" class="secondary" onclick="loadSales()">Обновить журнал</button><button type="button" class="secondary" onclick="backupSales()">Скачать резервную копию</button></div>
-</form>
-<p id="sales_message" class="hint" role="status" aria-live="polite"></p>
+<h2>Мои продажи · данные Market API</h2>
+<p class="hint">Этот раздел загружает твои объявления из API Market.CSGO и Market.Dota2, а затем сравнивает цены с опубликованными минимальными предложениями. Вручную добавлять предметы не нужно. Агент не размещает объявления и не изменяет их стоимость.</p>
+<div class="info-bar"><span id="sales_active">На продаже: —</span><span id="sales_lower">Минимальная цена ниже: —</span><span id="sales_sold">После продажи: —</span></div>
+<div class="actions"><button type="button" onclick="loadMarketSales()">Проверить через API</button></div>
+<p class="hint">Для доступа к личным объявлениям укажи в Render отдельные серверные переменные <code>MARKET_CSGO_API_KEY</code> и/или <code>MARKET_DOTA2_API_KEY</code>. Ключ Pulse не подходит. Не вводи эти ключи на странице.</p>
+<p id="sales_message" class="hint" role="status" aria-live="polite">Для первой загрузки открой вкладку «Мои продажи».</p>
+<div id="sales_sources" class="info-bar"></div>
 <div id="sales_list"></div>
-<p class="hint">На бесплатном Render записи хранятся на временном диске: после перезапуска или нового развёртывания они могут исчезнуть. Скачивай резервную копию. Обновление журнала не расходует токены Pulse.</p>
+<p class="hint">«Минимальная цена ниже» означает сравнение обычных предложений по названию, без учёта редкого float или других индивидуальных особенностей. Обновление не чаще одного раза в 2 минуты; на бесплатном Render непрерывная фоновая работа не гарантируется.</p>
 </section>
 <div id="market_panel">
 
@@ -315,67 +309,64 @@ showCost();
  refresh();setInterval(refresh,2500)
 })();
 
-let salesEntries=[],salesBusy=false,salesLoaded=false;
-const saleLabels={listed:'На продаже',sold:'Продано',withdrawn:'Снято'};
+
+let salesLoadedAt='';
+const saleStatusNames={'1':'На продаже','2':'Продан — нужна передача','7':'Ожидает подтверждения покупателем'};
 function switchModule(sales){
  document.getElementById('sales_panel').hidden=!sales;
  document.getElementById('market_panel').hidden=sales;
  for(const [id,active] of [['nav_market',!sales],['nav_sales',sales]]) {
   const e=document.getElementById(id);e.classList.toggle('active',active);e.setAttribute('aria-pressed',String(active));
  }
- if(sales)loadSales();
+ if(sales)loadMarketSales();
 }
-function saleDate(s){const d=new Date(s);return s&&!isNaN(d.getTime())?d.toLocaleString('ru-RU'):'—'}
-function salePrice(n){return Number(n).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽'}
-function showSales(data){
- salesEntries=Array.isArray(data.entries)?data.entries:[];
- salesLoaded=true;
- setText('sales_active','На продаже: '+salesEntries.filter(x=>x.status==='listed').length);
- setText('sales_sold','Продано: '+salesEntries.filter(x=>x.status==='sold').length);
- setText('sales_lower','Рыночная цена ниже: '+salesEntries.filter(x=>x.status==='listed'&&x.market_min>0&&x.market_min<x.price).length);
- const list=document.getElementById('sales_list');list.replaceChildren();
- if(!salesEntries.length){list.textContent='Журнал пуст. Добавь первую запись.';return}
- for(const entry of salesEntries){
-  const card=document.createElement('article');card.className='sale-row';
-  const title=document.createElement('h3');title.textContent=entry.name;card.append(title);
-  const info=document.createElement('p');info.textContent=(entry.game==='cs2'?'CS2':'Dota 2')+' · '+(saleLabels[entry.status]||'—')+' · '+salePrice(entry.price);card.append(info);
-  if(entry.status==='listed'){
-   const quote=document.createElement('p');
-   if(entry.market_min>0){quote.textContent='Последняя рыночная цена: '+salePrice(entry.market_min)+' · '+saleDate(entry.market_time)+(entry.market_min<entry.price?' · ниже записанной цены':'');quote.className=entry.market_min<entry.price?'warn':'muted';}
-   else{quote.textContent='Нет совпадающей котировки в последних сохранённых результатах.';quote.className='muted'}
-   card.append(quote);
+function salePrice(n,currency){
+ const f=Number(n);
+ return Number.isFinite(f)?f.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+String(currency||'RUB'):'—';
+}
+function saleUpdatedAt(s){const d=new Date(s);return s&&!isNaN(d.valueOf())?d.toLocaleString('ru-RU'):'—'}
+async function loadMarketSales(){
+ const msg=document.getElementById('sales_message');
+ msg.textContent='Читаю объявления и рыночные цены через API…';
+ try{
+  const resp=await fetch('/api/sales-tracker',{cache:'no-store'});
+  if(!resp.ok)throw Error('HTTP '+resp.status);
+  const data=await resp.json();
+  const listings=Array.isArray(data.listings)?data.listings:[];
+  const active=listings.filter(x=>x.status==='1');
+  const undercut=active.filter(x=>x.is_below===true);
+  const sold=listings.filter(x=>x.status==='2'||x.status==='7');
+  setText('sales_active','На продаже: '+active.length);
+  setText('sales_lower','Минимальная цена ниже: '+undercut.length);
+  setText('sales_sold','После продажи: '+sold.length);
+  const sources=document.getElementById('sales_sources');sources.replaceChildren();
+  for(const source of data.sources||[]){
+    const e=document.createElement('span');
+    e.textContent=source.market+': '+(source.connected?(source.error?'Ошибка — '+source.error:'объявлений: '+source.count):'не подключён');
+    if(source.error)e.classList.add('warn');
+    sources.append(e);
   }
-  const controls=document.createElement('div');controls.className='actions';
-  for(const [label,action] of [['Изменить запись',()=>editSale(entry)],['Удалить запись',()=>{if(confirm('Удалить запись из журнала?'))mutateSale({action:'delete',id:entry.id})}]]){
-   const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=label;b.addEventListener('click',action);controls.append(b);
+  const list=document.getElementById('sales_list');list.replaceChildren();
+  for(const item of listings){
+    const card=document.createElement('article');card.className='sale-row';
+    const h=document.createElement('h3');h.textContent=item.name;card.append(h);
+    const p=document.createElement('p');p.textContent=item.market+' · '+(saleStatusNames[item.status]||'Статус '+item.status)+' · Твоя цена: '+salePrice(item.price,item.currency);card.append(p);
+    if(item.status==='1'){
+       const quote=document.createElement('p');
+       if(item.has_quote) {
+           quote.textContent='Минимальная цена рынка: '+salePrice(item.lowest_price,item.currency)+(item.is_below?' · ниже твоей на '+salePrice(item.price-item.lowest_price,item.currency):' · твоя цена не выше минимальной');
+           quote.className=item.is_below?'warn':'success';
+       } else {quote.textContent='Нет котировки для точного сравнения';quote.className='muted'}
+       card.append(quote);
+       const q=document.createElement('p');q.className='hint';q.textContent='Позиция в очереди: '+item.queue_position+(item.price_checked_at?' · котировка: '+saleUpdatedAt(item.price_checked_at):'');card.append(q);
+    }
+    list.append(card);
   }
-  card.append(controls);
-  const hist=document.createElement('details');const summary=document.createElement('summary');summary.textContent='История записи';hist.append(summary);
-  const h=document.createElement('p');h.className='sale-history';h.textContent=(entry.history||[]).slice().reverse().map(x=>saleDate(x.at)+' · '+salePrice(x.price)+' · '+(saleLabels[x.status]||'—')).join('\n')||'Нет истории';hist.append(h);card.append(hist);list.append(card);
- }
+  if(!listings.length){const el=document.createElement('p');el.className='empty';el.textContent='Нет объявлений в подключённых аккаунтах или не настроен ключ Market API.';list.append(el)}
+  salesLoadedAt=data.generated_at||'';
+  msg.textContent='Последняя загрузка: '+saleUpdatedAt(salesLoadedAt)+(data.cached?' · из серверного кеша':' · через API')+'.';
+ }catch(e){msg.textContent='Ошибка загрузки Market API: '+e.message}
 }
-async function loadSales(quiet=false){
- if(salesBusy)return;salesBusy=true;
- try{const response=await fetch('/api/sales',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);showSales(await response.json());if(!quiet)setText('sales_message','Журнал загружен с сервера.')}
- catch(e){setText('sales_message','Не удалось загрузить журнал: '+e.message)}
- finally{salesBusy=false}
-}
-async function mutateSale(payload){
- if(salesBusy)return;salesBusy=true;
- try{showSales(await api('/api/sales',payload));resetSaleForm();setText('sales_message','Запись сохранена на сервере.')}
- catch(e){setText('sales_message','Ошибка: '+e.message)}
- finally{salesBusy=false}
-}
-function editSale(entry){
- setVal('sales_id',entry.id);setVal('sales_name',entry.name);setVal('sales_game',entry.game);setVal('sales_price',entry.price);setVal('sales_status',entry.status);
- setText('sales_submit','Сохранить изменения');document.getElementById('sales_name').focus();
-}
-function resetSaleForm(){document.getElementById('sales_form').reset();setVal('sales_id','');setText('sales_submit','Добавить запись')}
-function backupSales(){
- if(!salesLoaded){setText('sales_message','Сначала загрузи журнал.');return}
- const u=URL.createObjectURL(new Blob([JSON.stringify({entries:salesEntries},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='pulse-sales-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);
-}
-document.getElementById('sales_form').addEventListener('submit',e=>{e.preventDefault();mutateSale({action:'upsert',id:val('sales_id'),name:val('sales_name'),game:val('sales_game'),price:Number(val('sales_price')),status:val('sales_status')})});
-setInterval(()=>{if(!document.getElementById('sales_panel').hidden&&!document.hidden)loadSales(true)},20000);
+setInterval(()=>{if(!document.hidden&&!document.getElementById('sales_panel').hidden)loadMarketSales()},120000);
 
 </script></body></html>
