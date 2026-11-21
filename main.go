@@ -1178,7 +1178,7 @@ func (a *App) routes(mux *http.ServeMux) {
 		a.mu.Unlock()
 		jsonResponse(w, 200, status)
 	})
-	mux.HandleFunc("/api/sales", a.salesLedger)
+	mux.HandleFunc("/api/sales-tracker", a.marketSalesHandler)
 	mux.HandleFunc("/api/result", func(w http.ResponseWriter, r *http.Request) {
 		a.mu.Lock()
 		v := a.latest
@@ -1222,98 +1222,4 @@ func safeCSV(s string) string {
 		return "'" + s
 	}
 	return s
-}
-
-type SaleEvent struct {
-    At string `json:"at"`
-    Price float64 `json:"price"`
-    Status string `json:"status"`
-}
-type SaleEntry struct {
-    ID string `json:"id"`
-    Name string `json:"name"`
-    Game string `json:"game"`
-    Price float64 `json:"price"`
-    Status string `json:"status"`
-    Updated string `json:"updated"`
-    History []SaleEvent `json:"history"`
-}
-type SaleView struct {
-    SaleEntry
-    MarketMin float64 `json:"market_min,omitempty"`
-    MarketTime string `json:"market_time,omitempty"`
-}
-
-// Private manual ledger; no market account actions or additional API requests.
-func (a *App) salesLedger(w http.ResponseWriter, r *http.Request) {
-    var input struct {
-        Action string `json:"action"`
-        ID string `json:"id"`
-        Name string `json:"name"`
-        Game string `json:"game"`
-        Price float64 `json:"price"`
-        Status string `json:"status"`
-    }
-    if r.Method != http.MethodGet {
-        if !localPost(w,r) {return}
-        r.Body = http.MaxBytesReader(w,r.Body,16384)
-        if !requestJSON(w,r,&input) {return}
-    }
-    fail := func(code int,msg string){jsonResponse(w,code,map[string]string{"error":msg})}
-    a.mu.Lock()
-    defer a.mu.Unlock()
-    path := filepath.Join(filepath.Dir(settingsFile()),"sales-ledger.json")
-    entries := []SaleEntry{}
-    b,err := os.ReadFile(path)
-    if err == nil {
-        if json.Unmarshal(b,&entries)!=nil {fail(500,"Не удалось прочитать журнал");return}
-    } else if !os.IsNotExist(err) {fail(500,"Журнал недоступен");return}
-    if r.Method==http.MethodPost {
-        idx:=-1
-        for i,e:=range entries {if e.ID==input.ID {idx=i;break}}
-        switch input.Action {
-        case "upsert":
-            input.Name=strings.TrimSpace(input.Name)
-            if input.Name=="" || len(input.Name)>512 || (input.Game!="cs2" && input.Game!="dota2") || !isFinite(input.Price) || input.Price<=0 || input.Price>1e9 || (input.Status!="listed" && input.Status!="sold" && input.Status!="withdrawn") {fail(400,"Проверь название, игру, цену и статус");return}
-            if input.ID!="" && idx<0 {fail(404,"Запись не найдена");return}
-            now:=time.Now().UTC()
-            if idx<0 {
-                if len(entries)>=500 {fail(400,"Лимит журнала: 500 записей");return}
-                entries=append(entries,SaleEntry{ID:strconv.FormatInt(now.UnixNano(),10)})
-                idx=len(entries)-1
-            }
-            e:=&entries[idx]
-            if e.Price!=input.Price || e.Status!=input.Status || e.Name!=input.Name || e.Game!=input.Game {
-                e.History=append(e.History,SaleEvent{At:now.Format(time.RFC3339),Price:input.Price,Status:input.Status})
-                if len(e.History)>100 {e.History=e.History[len(e.History)-100:]}
-            }
-            e.Name=input.Name;e.Game=input.Game;e.Price=input.Price;e.Status=input.Status;e.Updated=now.Format(time.RFC3339)
-        case "delete":
-            if idx<0 {fail(404,"Запись не найдена");return}
-            entries=append(entries[:idx],entries[idx+1:]...)
-        default:
-            fail(400,"Неизвестная операция");return
-        }
-        b,err=json.Marshal(entries)
-        if err!=nil {fail(500,"Ошибка журнала");return}
-        if err=os.MkdirAll(filepath.Dir(path),0700);err!=nil {fail(500,"Не удалось сохранить журнал");return}
-        if err=atomicFile(path,b,0600);err!=nil {fail(500,"Не удалось сохранить журнал");return}
-    }
-    views:=make([]SaleView,0,len(entries))
-    for _,entry:=range entries {
-        v:=SaleView{SaleEntry:entry}
-        if entry.Status=="listed" && a.latest.Time!="" {
-            for _,arr:=range [][]Candidate{a.latest.All,a.latest.Selected} {
-                for _,c:=range arr {
-                    if c.Game==entry.Game && strings.EqualFold(strings.TrimSpace(c.Name),entry.Name) && c.MarketMin>0 && isFinite(c.MarketMin) && (v.MarketMin==0 || c.MarketMin<v.MarketMin) {
-                        v.MarketMin=c.MarketMin
-                        v.MarketTime=c.QuoteTime
-                        if v.MarketTime=="" {v.MarketTime=a.latest.Time}
-                    }
-                }
-            }
-        }
-        views=append(views,v)
-    }
-    jsonResponse(w,200,map[string]any{"entries":views})
 }
